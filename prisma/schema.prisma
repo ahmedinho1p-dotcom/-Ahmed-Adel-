@@ -1,0 +1,61 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Package {
+  id             String   @id @default(uuid())
+  name           String
+  platform       String   // "Facebook" | "Instagram" | "YouTube" | "Google Reviews"
+  followersCount String   // e.g., "1000" or "50"
+  price          Float
+  deliveryTime   String
+  description    String
+  gift           String?
+  badge          String?  // "Popular" | "Best Seller" | "Premium"
+  isFeatured     Boolean  @default(false)
+  isHidden       Boolean  @default(false)
+  discount       Float?   // percentage discount (e.g., 15 for 15% off)
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+}
+
+model Order {
+  id             String   @id @default(uuid())
+  customerName   String
+  whatsappNumber String
+  pageUrl        String
+  packageId      String
+  packageName    String
+  platform       String
+  price          Float
+  currency       String
+  status         String   // "New" | "Contacted" | "Completed" | "Cancelled"
+  createdAt      DateTime @default(now())
+}
+
+model Coupon {
+  id              String   @id @default(uuid())
+  code            String   @unique
+  discountPercent Float
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+}
+
+model Setting {
+  key   String @id
+  value String
+}
+
+model Review {
+  id           String   @id @default(uuid())
+  customerName String
+  rating       Int      @default(5)
+  content      String
+  isApproved   Boolean  @default(true)
+  createdAt    DateTime @default(now())
+}

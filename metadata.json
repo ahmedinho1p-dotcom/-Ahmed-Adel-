@@ -1,0 +1,6 @@
+{
+  "name": "SMM Store",
+  "description": "A production-ready full-stack Arabic Social Media Marketing (SMM) store with automated ordering, WhatsApp contact integrations, and a secure administrative dashboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

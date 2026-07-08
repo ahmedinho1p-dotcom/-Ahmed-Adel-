@@ -118,12 +118,40 @@ export default function Header({
               setView('admin');
               setMobileMenuOpen(false);
             }}
-            className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-tr from-[#833ab4] via-[#fd1d1d] to-[#fcb045] flex items-center justify-center shadow-md shadow-purple-900/30 cursor-pointer hover:scale-110 transition-transform"
+            className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-tr from-purple-600 via-pink-600 to-amber-500 flex items-center justify-center shadow-lg shadow-purple-500/25 cursor-pointer hover:scale-110 transition-transform relative group border border-white/15"
             animate={{ rotate: [0, 5, -5, 0] }}
             transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
             title="زد للإدارة"
           >
-            <span className="text-white font-black text-base sm:text-lg font-sans select-none">زد</span>
+            <svg 
+              className="w-5.5 h-5.5 sm:w-6.5 sm:h-6.5 text-white filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)] transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path 
+                d="M4 6C4 4.89543 4.89543 4 6 4H18C19.1046 4 20 4.89543 20 6V8C20 8.55228 19.5523 9 19 9H9.41421L17.7071 17.2929C18.0976 17.6834 18.0976 18.3166 17.7071 18.7071L16.2929 20.1213C15.9024 20.5118 15.2692 20.5118 14.8787 20.1213L4.29289 9.53553C3.90237 9.14501 3.90237 8.51184 4.29289 8.12132L4 6Z" 
+                fill="url(#zGrad1)" 
+              />
+              <path 
+                d="M20 18C20 19.1046 19.1046 20 18 20H6C4.89543 20 4 19.1046 4 18V16C4 15.4477 4.44772 15 5 15H14.5858L6.29289 6.70711C5.90237 6.31658 5.90237 5.68342 6.29289 5.29289L7.70711 3.87868C8.09763 3.48816 8.7308 3.48816 9.12132 3.87868L19.7071 14.4645C20.0976 14.855 20.0976 15.4882 19.7071 15.8787L20 18Z" 
+                fill="url(#zGrad2)" 
+                opacity="0.85"
+                style={{ mixBlendMode: 'overlay' as any }}
+              />
+              <defs>
+                <linearGradient id="zGrad1" x1="4" y1="4" x2="20" y2="20" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stopColor="#FFFFFF" />
+                  <stop offset="50%" stopColor="#F1F5F9" />
+                  <stop offset="100%" stopColor="#CBD5E1" />
+                </linearGradient>
+                <linearGradient id="zGrad2" x1="20" y1="20" x2="4" y2="4" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stopColor="#FFFFFF" />
+                  <stop offset="100%" stopColor="#475569" />
+                </linearGradient>
+              </defs>
+            </svg>
+            <div className="absolute inset-0 rounded-xl bg-gradient-to-tr from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           </motion.div>
           <div className="flex flex-col items-center sm:items-start">
             <motion.span 

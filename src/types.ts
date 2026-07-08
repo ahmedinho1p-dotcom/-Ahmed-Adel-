@@ -26,6 +26,12 @@ export interface Order {
   price: number;
   currency: string;
   status: 'New' | 'Contacted' | 'Completed' | 'Cancelled';
+  paymentMethod?: string | null;
+  paymentSender?: string | null;
+  paymentAmount?: number | null;
+  paymentScreenshot?: string | null;
+  paymentStatus?: string | null;
+  internalNotes?: string | null;
   createdAt: string;
 }
 
@@ -51,6 +57,11 @@ export interface StoreSettings {
   smtp_pass?: string;
   smtp_secure?: string;
   smtp_receiver?: string;
+  vodafone_cash_number?: string;
+  orange_cash_number?: string;
+  etisalat_cash_number?: string;
+  we_pay_number?: string;
+  instapay_number?: string;
 }
 
 export interface Review {

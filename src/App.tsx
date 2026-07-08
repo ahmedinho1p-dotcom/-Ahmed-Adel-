@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { 
   Sparkles, Search, MessageCircle, Phone, ArrowLeft, Facebook, Instagram, 
   Youtube, Star, CheckCircle, ShieldAlert, Award, ChevronLeft, ChevronRight, Check
@@ -220,6 +220,10 @@ export default function App() {
     pageUrl: string;
     packageId: string;
     couponCode?: string;
+    paymentMethod?: string;
+    paymentSender?: string;
+    paymentAmount?: number;
+    paymentScreenshot?: string;
   }) => {
     try {
       const res = await fetch("/api/orders", {
@@ -450,105 +454,131 @@ export default function App() {
 
                   {/* Package cards grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-                    {filteredPackages.length === 0 ? (
-                      <div className="col-span-full py-16 text-center text-neutral-500 text-sm font-bold">
-                        لا توجد أي باقات متاحة متوافقة مع هذا البحث حالياً.
-                      </div>
-                    ) : (
-                      filteredPackages.map((pack) => {
-                        const style = getPackageStyle(pack.name, darkMode);
-                        return (
-                          <motion.div
-                            key={pack.id}
-                            whileHover={{ y: -8, scale: 1.02 }}
-                            transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                            className={`rounded-2xl border p-6 flex flex-col justify-between transition-all duration-300 relative group overflow-hidden ${style.cardClass}`}
-                          >
-                            {/* Inner body wrapper to allow custom layouts */}
-                            <div className="w-full h-full flex flex-col justify-between relative z-10">
-                              
-                              <div className="space-y-4">
-                                {/* Header (Badge + Platform) */}
-                                <div className="flex justify-between items-center">
-                                  <span className="text-[10px] font-black text-pink-500 bg-pink-500/10 px-2.5 py-1 rounded-full flex items-center gap-1 font-mono">
-                                    {renderPlatformIcon(pack.platform)}
-                                    {pack.platform}
-                                  </span>
-                                  <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${style.badgeClass}`}>
-                                    {style.badgeText}
-                                  </span>
-                                </div>
-
-                                {/* Package title */}
-                                <h3 className={`text-base font-black leading-snug ${darkMode ? "text-white" : "text-neutral-900"}`}>{pack.name}</h3>
+                    <AnimatePresence mode="popLayout">
+                      {filteredPackages.length === 0 ? (
+                        <motion.div 
+                          key="no-packages"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ duration: 0.3 }}
+                          className="col-span-full py-16 text-center text-neutral-500 text-sm font-bold"
+                        >
+                          لا توجد أي باقات متاحة متوافقة مع هذا البحث حالياً.
+                        </motion.div>
+                      ) : (
+                        filteredPackages.map((pack) => {
+                          const style = getPackageStyle(pack.name, darkMode);
+                          return (
+                            <motion.div
+                              key={pack.id}
+                              initial={{ opacity: 0, y: 25, scale: 0.97 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: -20, scale: 0.97 }}
+                              transition={{ duration: 0.35, ease: "easeOut" }}
+                              whileHover={{ y: -8, scale: 1.015 }}
+                              whileTap={{ scale: 0.985 }}
+                              className={`rounded-2xl border p-6 flex flex-col justify-between transition-all duration-300 relative group overflow-hidden ${style.cardClass}`}
+                            >
+                              {/* Inner body wrapper to allow custom layouts */}
+                              <div className="w-full h-full flex flex-col justify-between relative z-10">
                                 
-                                {/* Followers amount badge with 'متابع Followers' wording */}
-                                <div className="flex items-baseline gap-2">
-                                  <span className={`text-3xl font-black font-mono tracking-tight ${style.accentText}`}>
-                                    {pack.followersCount}
-                                  </span>
-                                  <span className="text-xs font-bold text-neutral-450">متابع Followers</span>
-                                </div>
-
-                                <p className="text-xs text-neutral-450 leading-relaxed min-h-[48px]">{pack.description}</p>
-                                
-                                {/* Delivery and features */}
-                                <div className="space-y-2 border-t border-neutral-800/20 pt-4 text-xs text-neutral-450">
-                                  <div className="flex justify-between">
-                                    <span>⏱️ وقت البدء والتسليم:</span>
-                                    <span className="font-bold text-neutral-300">{pack.deliveryTime}</span>
-                                  </div>
-                                  
-                                  {/* Gift Label */}
-                                  {pack.gift && (
-                                    <div className="flex justify-between text-[#fcaf45] font-bold">
-                                      <span>🎁 الهدية الخاصة:</span>
-                                      <span>{pack.gift}</span>
-                                    </div>
-                                  )}
-
-                                  {/* Discount percentage tag */}
-                                  {pack.discount && (
-                                    <div className="flex justify-between text-green-500 font-bold">
-                                      <span>🔥 خصم فوري:</span>
-                                      <span>وفر {pack.discount}% خصم اليوم!</span>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Price block & button */}
-                              <div className="mt-6 pt-4 border-t border-neutral-800/15 flex items-center justify-between gap-4">
-                                <div className="flex flex-col">
-                                  {pack.discount && (
-                                    <span className="text-[10px] text-neutral-500 line-through font-mono">
-                                      {getConvertedPriceText(pack.price)}
+                                <div className="space-y-4">
+                                  {/* Header (Badge + Platform) */}
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-[10px] font-black text-pink-500 bg-pink-500/10 px-2.5 py-1 rounded-full flex items-center gap-1 font-mono">
+                                      {renderPlatformIcon(pack.platform)}
+                                      {pack.platform}
                                     </span>
-                                  )}
-                                  <span className="text-lg font-black font-mono text-pink-500">
-                                    {getConvertedPriceText(pack.price, pack.discount)}
-                                  </span>
+                                    <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${style.badgeClass}`}>
+                                      {style.badgeText}
+                                    </span>
+                                  </div>
+
+                                  {/* Package title */}
+                                  <h3 className={`text-base font-black leading-snug ${darkMode ? "text-white" : "text-neutral-900"}`}>{pack.name}</h3>
+                                  
+                                  {/* Followers amount badge with 'متابع Followers' wording */}
+                                  <div className="flex items-baseline gap-2">
+                                    <span className={`text-3xl font-black font-mono tracking-tight ${style.accentText}`}>
+                                      {pack.followersCount}
+                                    </span>
+                                    <span className="text-xs font-bold text-neutral-450">متابع Followers</span>
+                                  </div>
+
+                                  <p className="text-xs text-neutral-450 leading-relaxed min-h-[48px]">{pack.description}</p>
+                                  
+                                  {/* Delivery and features */}
+                                  <div className="space-y-2 border-t border-neutral-800/20 pt-4 text-xs text-neutral-450">
+                                    <div className="flex justify-between">
+                                      <span>⏱️ وقت البدء والتسليم:</span>
+                                      <span className="font-bold text-neutral-300">{pack.deliveryTime}</span>
+                                    </div>
+                                    
+                                    {/* Beautiful Interactive Gift Pill Button */}
+                                    {pack.gift && (
+                                      <motion.div
+                                        whileHover={{ scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
+                                        className="mt-3.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between gap-2 shadow-lg shadow-amber-500/5 select-none"
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-sm">🎁</span>
+                                          <span className="text-xs font-bold text-amber-500 dark:text-amber-400">هدية إضافية:</span>
+                                        </div>
+                                        <span className="text-xs font-black bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 dark:from-amber-400 dark:via-orange-400 dark:to-amber-300 bg-clip-text text-transparent flex items-center gap-1">
+                                          {pack.gift === "Like" ? "زيادة لايكات Like ❤️" :
+                                           pack.gift === "Follow" ? "زيادة متابعين Follow 👤" :
+                                           pack.gift === "Both" ? "لايكات ومتابعين Like & Follow ✨" :
+                                           pack.gift}
+                                        </span>
+                                      </motion.div>
+                                    )}
+
+                                    {/* Discount percentage tag */}
+                                    {pack.discount && (
+                                      <div className="flex justify-between text-green-500 font-bold">
+                                        <span>🔥 خصم فوري:</span>
+                                        <span>وفر {pack.discount}% خصم اليوم!</span>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
 
-                                <motion.button
-                                  id={`pkg-order-btn-${pack.id}`}
-                                  onClick={() => setSelectedPackage(pack)}
-                                  whileHover={{ scale: 1.05 }}
-                                  whileTap={{ scale: 0.95 }}
-                                  className={`px-5 py-2.5 rounded-xl font-extrabold text-xs transition-all cursor-pointer ${style.buttonClass}`}
-                                >
-                                  اطلب الآن 🚀
-                                </motion.button>
+                                {/* Price block & button */}
+                                <div className="mt-6 pt-4 border-t border-neutral-800/15 flex items-center justify-between gap-4">
+                                  <div className="flex flex-col">
+                                    {pack.discount && (
+                                      <span className="text-[10px] text-neutral-500 line-through font-mono">
+                                        {getConvertedPriceText(pack.price)}
+                                      </span>
+                                    )}
+                                    <span className="text-lg font-black font-mono text-pink-500">
+                                      {getConvertedPriceText(pack.price, pack.discount)}
+                                    </span>
+                                  </div>
+
+                                  <motion.button
+                                    id={`pkg-order-btn-${pack.id}`}
+                                    onClick={() => setSelectedPackage(pack)}
+                                    whileHover={{ scale: 1.06, filter: "hue-rotate(8deg) brightness(1.15) contrast(1.05)" }}
+                                    whileTap={{ scale: 0.93, filter: "brightness(0.95)" }}
+                                    transition={{ type: "spring", stiffness: 450, damping: 15 }}
+                                    className={`px-5 py-2.5 rounded-xl font-extrabold text-xs transition-all duration-300 cursor-pointer touch-manipulation active:scale-95 ${style.buttonClass}`}
+                                  >
+                                    اطلب الآن 🚀
+                                  </motion.button>
+                                </div>
+
                               </div>
 
-                            </div>
-
-                            {/* Glow/reflect premium backgrounds */}
-                            <div className={`${style.glowBg}`} />
-                          </motion.div>
-                        );
-                      })
-                    )}
+                              {/* Glow/reflect premium backgrounds */}
+                              <div className={`${style.glowBg}`} />
+                            </motion.div>
+                          );
+                        })
+                      )}
+                    </AnimatePresence>
                   </div>
 
                 </section>

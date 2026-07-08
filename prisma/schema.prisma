@@ -25,17 +25,23 @@ model Package {
 }
 
 model Order {
-  id             String   @id @default(uuid())
-  customerName   String
-  whatsappNumber String
-  pageUrl        String
-  packageId      String
-  packageName    String
-  platform       String
-  price          Float
-  currency       String
-  status         String   // "New" | "Contacted" | "Completed" | "Cancelled"
-  createdAt      DateTime @default(now())
+  id                String   @id @default(uuid())
+  customerName      String
+  whatsappNumber    String
+  pageUrl           String
+  packageId         String
+  packageName       String
+  platform          String
+  price             Float
+  currency          String
+  status            String   // "New" | "Contacted" | "Completed" | "Cancelled"
+  paymentMethod     String?
+  paymentSender     String?
+  paymentAmount     Float?
+  paymentScreenshot String?  // Stores the base64 screenshot image
+  paymentStatus     String?  // "في انتظار المراجعة" | "مدفوع" | "مرفوض"
+  internalNotes     String?  // Admin internal notes
+  createdAt         DateTime @default(now())
 }
 
 model Coupon {

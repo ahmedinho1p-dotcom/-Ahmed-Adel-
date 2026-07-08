@@ -71,7 +71,16 @@ export default function AdminPanel({ darkMode, currency, onSettingsUpdated }: Ad
   const [settSmtpPass, setSettSmtpPass] = useState("");
   const [settSmtpSecure, setSettSmtpSecure] = useState(false);
   const [settSmtpReceiver, setSettSmtpReceiver] = useState("");
+  const [settVodafoneCash, setSettVodafoneCash] = useState("");
+  const [settOrangeCash, setSettOrangeCash] = useState("");
+  const [settEtisalatCash, setSettEtisalatCash] = useState("");
+  const [settWePay, setSettWePay] = useState("");
+  const [settInstapay, setSettInstapay] = useState("");
   const [newAdminPassword, setNewAdminPassword] = useState("");
+
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
+  const [zoomImage, setZoomImage] = useState<string | null>(null);
+  const [editingNotesText, setEditingNotesText] = useState<{ [orderId: string]: string }>({});
 
   // Real-time new orders alert
   const [newOrdersCount, setNewOrdersCount] = useState(0);
@@ -131,6 +140,11 @@ export default function AdminPanel({ darkMode, currency, onSettingsUpdated }: Ad
         setSettSmtpPass(settingsData.smtp_pass || "");
         setSettSmtpSecure(settingsData.smtp_secure === "true");
         setSettSmtpReceiver(settingsData.smtp_receiver || "elfashikh5@gmail.com");
+        setSettVodafoneCash(settingsData.vodafone_cash_number || "01124656914");
+        setSettOrangeCash(settingsData.orange_cash_number || "01124656914");
+        setSettEtisalatCash(settingsData.etisalat_cash_number || "01124656914");
+        setSettWePay(settingsData.we_pay_number || "01124656914");
+        setSettInstapay(settingsData.instapay_number || "01558676497");
       }
 
       // Get Stats
@@ -207,6 +221,29 @@ export default function AdminPanel({ darkMode, currency, onSettingsUpdated }: Ad
       }
     } catch (e) {
       showError("فشل تحديث حالة الطلب");
+    }
+  };
+
+  // Modify payment status and notes
+  const handleUpdatePayment = async (orderId: string, paymentStatus: string, internalNotes: string) => {
+    if (!token) return;
+    try {
+      const res = await fetch(`/api/orders/${orderId}/payment`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ paymentStatus, internalNotes }),
+      });
+      if (res.ok) {
+        fetchAllData(token);
+        showSuccess("تم تحديث بيانات الدفع والتحقق بنجاح!");
+      } else {
+        showError("فشل تحديث بيانات الدفع");
+      }
+    } catch (e) {
+      showError("حدث خطأ أثناء حفظ التغييرات");
     }
   };
 
@@ -432,6 +469,11 @@ export default function AdminPanel({ darkMode, currency, onSettingsUpdated }: Ad
       smtp_pass: settSmtpPass,
       smtp_secure: settSmtpSecure.toString(),
       smtp_receiver: settSmtpReceiver,
+      vodafone_cash_number: settVodafoneCash,
+      orange_cash_number: settOrangeCash,
+      etisalat_cash_number: settEtisalatCash,
+      we_pay_number: settWePay,
+      instapay_number: settInstapay,
     };
 
     try {
@@ -1100,18 +1142,46 @@ export default function AdminPanel({ darkMode, currency, onSettingsUpdated }: Ad
                             />
                           </div>
 
-                          <div>
-                            <label className="block text-[11px] font-bold text-neutral-400 mb-1">الهدية الإضافية المرفقة (اختياري)</label>
-                            <input
-                              id="pkg-form-gift"
-                              type="text"
-                              placeholder="مثال: 500 لايك إضافي مجاناً"
-                              value={packGift}
-                              onChange={(e) => setPackGift(e.target.value)}
-                              className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none focus:border-pink-500 ${
-                                darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
-                              }`}
-                            />
+                          <div className="md:col-span-2">
+                            <label className="block text-[11px] font-bold text-neutral-400 mb-2">نوع الهدية الإضافية المرفقة مع الباقة (التحكم بالهدية)</label>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                              {([
+                                { value: "", label: "❌ بدون هدية" },
+                                { value: "Like", label: "❤️ لايك Like" },
+                                { value: "Follow", label: "👤 متابع Follow" },
+                                { value: "Both", label: "✨ الاثنين معاً (Like & Follow)" },
+                              ] as const).map((opt) => (
+                                <button
+                                  key={opt.value}
+                                  type="button"
+                                  onClick={() => setPackGift(opt.value)}
+                                  className={`p-2.5 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
+                                    packGift === opt.value
+                                      ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white border-transparent"
+                                      : darkMode
+                                        ? "bg-neutral-950 border-neutral-800 text-neutral-400 hover:text-white"
+                                        : "bg-white border-neutral-200 text-neutral-600 hover:bg-neutral-50"
+                                  }`}
+                                >
+                                  {opt.label}
+                                </button>
+                              ))}
+                            </div>
+                            
+                            {/* Allow custom gift if not one of standard options */}
+                            <div className="mt-2.5">
+                              <label className="block text-[10px] text-neutral-400 mb-1">أو اكتب اسم هدية مخصصة يدوياً:</label>
+                              <input
+                                id="pkg-form-gift"
+                                type="text"
+                                placeholder="مثال: زيادة 200 لايك مجاناً"
+                                value={packGift}
+                                onChange={(e) => setPackGift(e.target.value)}
+                                className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none focus:border-pink-500 ${
+                                  darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                                }`}
+                              />
+                            </div>
                           </div>
 
                           <div>
@@ -1233,9 +1303,22 @@ export default function AdminPanel({ darkMode, currency, onSettingsUpdated }: Ad
                                 </td>
 
                                 <td className="p-4 font-bold text-neutral-100">
-                                  <div className="flex items-center gap-2">
-                                    {pack.name}
-                                    {pack.isFeatured && <span className="text-[9px] bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 font-extrabold px-1.5 py-0.5 rounded">Featured</span>}
+                                  <div className="flex flex-col gap-1">
+                                    <div className="flex items-center gap-2">
+                                      {pack.name}
+                                      {pack.isFeatured && <span className="text-[9px] bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 font-extrabold px-1.5 py-0.5 rounded">Featured</span>}
+                                    </div>
+                                    {pack.gift && (
+                                      <div className="text-[10px] text-amber-500 dark:text-amber-400 flex items-center gap-1 font-medium">
+                                        <span>🎁 الهدية:</span>
+                                        <span className="font-extrabold">
+                                          {pack.gift === "Like" ? "لايك Like ❤️" :
+                                           pack.gift === "Follow" ? "متابع Follow 👤" :
+                                           pack.gift === "Both" ? "الاثنين معاً Like & Follow ✨" :
+                                           pack.gift}
+                                        </span>
+                                      </div>
+                                    )}
                                   </div>
                                 </td>
 
@@ -1566,6 +1649,87 @@ export default function AdminPanel({ darkMode, currency, onSettingsUpdated }: Ad
                               />
                               <span>SSL/TLS Secure connection</span>
                             </label>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Section D: Store payment accounts */}
+                      <div className={`p-6 rounded-2xl border ${darkMode ? "bg-neutral-900/30 border-neutral-800" : "bg-neutral-50 border-neutral-200"}`}>
+                        <h3 className="font-bold mb-4 text-xs flex items-center gap-2">
+                          <Wallet className="w-4 h-4 text-pink-500" />
+                          أرقام وعناوين استقبال أموال التحويلات (الدفع عبر المتجر)
+                        </h3>
+                        <p className="text-[10px] text-neutral-400 mb-4">هذه هي الأرقام والعناوين التي تظهر للعملاء في واجهة الدفع عند اختيارهم الدفع عبر المتجر.</p>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                          <div>
+                            <label className="block text-[11px] font-bold text-neutral-400 mb-1">فودافون كاش (Vodafone Cash)</label>
+                            <input
+                              id="settings-input-vodafone"
+                              type="text"
+                              required
+                              value={settVodafoneCash}
+                              onChange={(e) => setSettVodafoneCash(e.target.value)}
+                              className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none font-mono ${
+                                darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                              }`}
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-bold text-neutral-400 mb-1">أورنج كاش (Orange Cash)</label>
+                            <input
+                              id="settings-input-orange"
+                              type="text"
+                              required
+                              value={settOrangeCash}
+                              onChange={(e) => setSettOrangeCash(e.target.value)}
+                              className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none font-mono ${
+                                darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                              }`}
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-bold text-neutral-400 mb-1">اتصالات كاش (Etisalat Cash)</label>
+                            <input
+                              id="settings-input-etisalat"
+                              type="text"
+                              required
+                              value={settEtisalatCash}
+                              onChange={(e) => setSettEtisalatCash(e.target.value)}
+                              className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none font-mono ${
+                                darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                              }`}
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-bold text-neutral-400 mb-1">WE Pay</label>
+                            <input
+                              id="settings-input-wepay"
+                              type="text"
+                              required
+                              value={settWePay}
+                              onChange={(e) => setSettWePay(e.target.value)}
+                              className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none font-mono ${
+                                darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                              }`}
+                            />
+                          </div>
+
+                          <div className="sm:col-span-2">
+                            <label className="block text-[11px] font-bold text-neutral-400 mb-1">إنستا باي (عنوان أو رقم InstaPay)</label>
+                            <input
+                              id="settings-input-instapay"
+                              type="text"
+                              required
+                              value={settInstapay}
+                              onChange={(e) => setSettInstapay(e.target.value)}
+                              className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none font-mono ${
+                                darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                              }`}
+                            />
                           </div>
                         </div>
                       </div>

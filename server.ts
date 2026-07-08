@@ -11,7 +11,8 @@ const app = express();
 const PORT = 3000;
 const JWT_SECRET = process.env.JWT_SECRET || "zwdha-super-secret-key-123456";
 
-app.use(express.json());
+app.use(express.json({ limit: "15mb" }));
+app.use(express.urlencoded({ limit: "15mb", extended: true }));
 
 // In-memory simple rate limiting for public endpoints (order creation, coupon checks, reviews)
 const rateLimits = new Map<string, { count: number; resetAt: number }>();
@@ -186,7 +187,17 @@ app.post(
   rateLimit(5, 60 * 1000, "تم إرسال عدد كبير من الطلبات من هذا الجهاز، الرجاء الانتظار دقيقة"),
   async (req, res) => {
     try {
-      const { customerName, whatsappNumber, pageUrl, packageId, couponCode } = req.body;
+      const { 
+        customerName, 
+        whatsappNumber, 
+        pageUrl, 
+        packageId, 
+        couponCode,
+        paymentMethod,
+        paymentSender,
+        paymentAmount,
+        paymentScreenshot
+      } = req.body;
 
       if (!customerName || !whatsappNumber || !pageUrl || !packageId) {
         return res.status(400).json({ error: "جميع الحقول مطلوبة لتسجيل الطلب" });
@@ -239,6 +250,11 @@ app.post(
           price: finalPrice,
           currency,
           status: "New",
+          paymentMethod: paymentMethod || null,
+          paymentSender: paymentSender || null,
+          paymentAmount: paymentAmount ? parseFloat(paymentAmount) : null,
+          paymentScreenshot: paymentScreenshot || null,
+          paymentStatus: paymentMethod ? "في انتظار المراجعة" : null,
         },
       });
 
@@ -255,9 +271,13 @@ app.post(
       // Trigger Email Notification (Non-blocking)
       sendOrderEmail(newOrder, pack);
 
+      const responseMessage = paymentMethod 
+        ? "تم استلام طلبك وإيصال الدفع بنجاح. سيقوم فريقنا بمراجعة عملية الدفع، وسيبدأ تنفيذ طلبك فور التأكد من عملية الدفع."
+        : "تم تسجيل طلبك بنجاح! سيقوم فريق الدعم الفني بالتواصل معك عبر الواتساب لإكمال الطلب.";
+
       res.status(201).json({
         success: true,
-        message: "تم تسجيل طلبك بنجاح! سيقوم فريق الدعم الفني بالتواصل معك عبر الواتساب لإكمال الطلب.",
+        message: responseMessage,
         order: newOrder,
       });
     } catch (error) {
@@ -546,6 +566,23 @@ app.patch("/api/orders/:id/status", authenticateAdmin, async (req, res) => {
   }
 });
 
+app.patch("/api/orders/:id/payment", authenticateAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { paymentStatus, internalNotes } = req.body;
+    const updated = await prisma.order.update({
+      where: { id },
+      data: { 
+        paymentStatus,
+        internalNotes
+      },
+    });
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: "فشل تحديث بيانات الدفع للطلب" });
+  }
+});
+
 // Admin Coupons API
 app.get("/api/coupons", authenticateAdmin, async (req, res) => {
   try {
@@ -683,6 +720,11 @@ async function initializeApp() {
     { key: "smtp_pass", value: "" },
     { key: "smtp_secure", value: "false" },
     { key: "smtp_receiver", value: "elfashikh5@gmail.com" },
+    { key: "vodafone_cash_number", value: "01124656914" },
+    { key: "orange_cash_number", value: "01124656914" },
+    { key: "etisalat_cash_number", value: "01124656914" },
+    { key: "we_pay_number", value: "01124656914" },
+    { key: "instapay_number", value: "01558676497" },
   ];
 
   for (const setting of defaultSettings) {

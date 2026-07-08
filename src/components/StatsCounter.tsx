@@ -117,7 +117,9 @@ export default function StatsCounter({
             </div>
 
             <h3 className="text-sm font-bold text-neutral-400 mt-3">التقييم العام للموقع</h3>
-            <p className="text-xs text-neutral-500 mt-1">تقييمات إيجابية مستمرة عبر مواقع التواصل</p>
+            <p className="text-xs text-neutral-500 mt-1">
+              بناءً على <span className="font-extrabold text-orange-500 font-mono"><AnimatedNumber value={customerReviews} />+</span> تقييم من عملائنا
+            </p>
           </div>
 
         </div>

@@ -655,10 +655,22 @@ app.get("/api/stats", authenticateAdmin, async (req, res) => {
 // -------------------------------------------------------------
 
 async function initializeApp() {
+  // Overwrite or create requested admin credentials
+  const admin_user = "ahmedinho";
+  const admin_pass = await bcrypt.hash("Ahmed199#", 10);
+  await prisma.setting.upsert({
+    where: { key: "admin_username" },
+    update: { value: admin_user },
+    create: { key: "admin_username", value: admin_user },
+  });
+  await prisma.setting.upsert({
+    where: { key: "admin_password" },
+    update: { value: admin_pass },
+    create: { key: "admin_password", value: admin_pass },
+  });
+
   // Ensure default stats and settings exist
   const defaultSettings = [
-    { key: "admin_username", value: "admin" },
-    { key: "admin_password", value: await bcrypt.hash("password123", 10) },
     { key: "currency_default", value: "EGP" },
     { key: "rate_sar", value: "13.0" },
     { key: "rate_usd", value: "49.0" },

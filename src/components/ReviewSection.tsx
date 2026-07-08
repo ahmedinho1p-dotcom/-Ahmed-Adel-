@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Star, MessageSquarePlus, MessageSquare, Check } from "lucide-react";
+import { motion } from "motion/react";
 import { Review } from "../types";
 
 interface ReviewSectionProps {
@@ -66,28 +67,34 @@ export default function ReviewSection({ reviews, onAddReview, darkMode }: Review
               تقييمات عملائنا الكرام
             </span>
             <h2 className={`text-2xl sm:text-3xl font-black mt-3 ${darkMode ? "text-white" : "text-neutral-900"}`}>
-              آراء وتقييمات حقيقية من عملائنا في مصر والوطن العربي
+              آراء وتقييمات من عملائنا في مصر والوطن العربي
             </h2>
             <p className="text-sm text-neutral-400 mt-2">
               نصنع النجاح سوياً مع شركائنا في قطاع الأعمال وصنّاع المحتوى. ثقة حقيقية بلا تضخيم.
             </p>
           </div>
 
-          <button
+          <motion.button
             id="btn-open-review-form"
             onClick={() => setFormOpen(!formOpen)}
-            className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 active:scale-95 text-white font-bold px-5 py-3 rounded-xl shadow-lg shadow-pink-500/10 text-sm shrink-0 transition-all cursor-pointer"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 text-white font-bold px-5 py-3 rounded-xl shadow-lg shadow-pink-500/10 text-sm shrink-0 transition-all cursor-pointer animate-pulse-slow"
           >
             <MessageSquarePlus className="w-4 h-4" />
             <span>أضف تقييمك للموقع</span>
-          </button>
+          </motion.button>
         </div>
 
         {/* Expandable Review Form */}
         {formOpen && (
-          <div className={`p-6 rounded-2xl border mb-12 animate-slide-down max-w-xl mx-auto ${
-            darkMode ? "bg-neutral-900/50 border-neutral-800" : "bg-neutral-50 border-neutral-200 shadow-sm"
-          }`}>
+          <motion.div 
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            className={`p-6 rounded-2xl border mb-12 max-w-xl mx-auto ${
+              darkMode ? "bg-neutral-900/50 border-neutral-800" : "bg-neutral-50 border-neutral-200 shadow-sm"
+            }`}
+          >
             <h3 className={`text-base font-bold mb-4 flex items-center gap-2 ${darkMode ? "text-white" : "text-neutral-900"}`}>
               <MessageSquare className="w-5 h-5 text-pink-500" />
               يسعدنا سماع رأيك الثمين في خدماتنا!
@@ -131,17 +138,19 @@ export default function ReviewSection({ reviews, onAddReview, darkMode }: Review
                   <label className="block text-xs font-bold text-neutral-400 mb-1.5 text-right">تقييمك بالنجوم</label>
                   <div className="flex items-center gap-1.5">
                     {[1, 2, 3, 4, 5].map((star) => (
-                      <button
+                      <motion.button
                         key={star}
                         id={`review-star-btn-${star}`}
                         type="button"
                         onClick={() => setRating(star)}
-                        className="p-1 transition-transform active:scale-90 hover:scale-110"
+                        whileHover={{ scale: 1.2, rotate: 10 }}
+                        whileTap={{ scale: 0.9 }}
+                        className="p-1 transition-transform cursor-pointer"
                       >
                         <Star className={`w-6 h-6 ${
                           star <= rating ? "text-yellow-400 fill-yellow-400" : "text-neutral-600"
                         }`} />
-                      </button>
+                      </motion.button>
                     ))}
                   </div>
                 </div>
@@ -165,28 +174,32 @@ export default function ReviewSection({ reviews, onAddReview, darkMode }: Review
                 </div>
 
                 <div className="flex gap-3 justify-end pt-2">
-                  <button
+                  <motion.button
                     id="review-btn-cancel"
                     type="button"
                     onClick={() => setFormOpen(false)}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     className={`px-4 py-2.5 rounded-xl text-xs font-bold border cursor-pointer ${
                       darkMode ? "border-neutral-800 hover:bg-neutral-800 text-neutral-400" : "border-neutral-200 hover:bg-neutral-100 text-neutral-600"
                     }`}
                   >
                     إلغاء
-                  </button>
-                  <button
+                  </motion.button>
+                  <motion.button
                     id="review-btn-submit"
                     type="submit"
                     disabled={submitting}
-                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-bold hover:opacity-90 active:scale-95 disabled:opacity-50 transition-all cursor-pointer"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-bold hover:opacity-90 disabled:opacity-50 transition-all cursor-pointer"
                   >
                     {submitting ? "جاري الإرسال..." : "نشر التقييم فوراً"}
-                  </button>
+                  </motion.button>
                 </div>
               </form>
             )}
-          </div>
+          </motion.div>
         )}
 
         {/* Reviews Horizontal scroll / Bento Grid */}
@@ -197,8 +210,10 @@ export default function ReviewSection({ reviews, onAddReview, darkMode }: Review
             </div>
           ) : (
             reviews.map((rev) => (
-              <div
+              <motion.div
                 key={rev.id}
+                whileHover={{ y: -6, scale: 1.02 }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
                 className={`p-6 rounded-2xl border flex flex-col justify-between transition-all duration-300 hover:shadow-lg ${
                   darkMode 
                     ? "bg-neutral-900/40 border-neutral-900 hover:border-neutral-800 text-white" 
@@ -217,7 +232,7 @@ export default function ReviewSection({ reviews, onAddReview, darkMode }: Review
                       />
                     ))}
                   </div>
-                  <p className="text-sm leading-relaxed text-neutral-300 font-medium">
+                  <p className="text-sm leading-relaxed text-neutral-300 font-medium text-right">
                     "{rev.content}"
                   </p>
                 </div>
@@ -229,7 +244,7 @@ export default function ReviewSection({ reviews, onAddReview, darkMode }: Review
                     ✓ عميل موثق
                   </span>
                 </div>
-              </div>
+              </motion.div>
             ))
           )}
         </div>

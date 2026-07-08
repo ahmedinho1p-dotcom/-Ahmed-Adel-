@@ -65,7 +65,7 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
           {/* Main 3D Card Container */}
           <motion.div
             id="splash-3d-card"
-            className="relative flex flex-col items-center justify-center p-12 rounded-3xl border border-white/5 bg-neutral-950/40 backdrop-blur-xl shadow-[0_0_50px_rgba(168,85,247,0.15)]"
+            className="relative flex flex-col items-center justify-center p-6 sm:p-8 rounded-2xl border border-white/5 bg-neutral-950/40 backdrop-blur-xl shadow-[0_0_50px_rgba(168,85,247,0.15)]"
             initial={{ 
               opacity: 0, 
               scale: 0.6,
@@ -101,15 +101,15 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
               initial={{ scale: 0, rotate: -180 }}
               animate={{ scale: 1, rotate: 0 }}
               transition={{ delay: 0.4, type: "spring" }}
-              className="mb-4 text-purple-400 bg-purple-500/10 p-2.5 rounded-full border border-purple-500/20"
+              className="mb-2 text-purple-400 bg-purple-500/10 p-2.5 rounded-full border border-purple-500/20"
             >
-              <Sparkles className="w-6 h-6 animate-pulse" />
+              <Sparkles className="w-5 h-5 animate-pulse" />
             </motion.div>
 
             {/* Main Brand Typography with 3D shadow depth */}
             <div className="text-center relative select-none">
               <motion.h1 
-                className="text-4xl sm:text-6xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-amber-400 filter drop-shadow-[0_10px_10px_rgba(0,0,0,0.8)]"
+                className="text-3xl sm:text-5xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-amber-400 filter drop-shadow-[0_10px_10px_rgba(0,0,0,0.8)]"
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3, duration: 0.6, ease: "easeOut" }}
@@ -119,7 +119,7 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
               </motion.h1>
 
               <motion.div
-                className="mt-4 flex items-center justify-center gap-1.5 text-xs sm:text-sm font-bold text-neutral-400 tracking-wide"
+                className="mt-2.5 flex items-center justify-center gap-1.5 text-xs sm:text-sm font-bold text-neutral-400 tracking-wide"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5, duration: 0.6 }}

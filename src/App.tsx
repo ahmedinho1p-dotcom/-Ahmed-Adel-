@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { motion } from "motion/react";
 import { 
   Sparkles, Search, MessageCircle, Phone, ArrowLeft, Facebook, Instagram, 
   Youtube, Star, CheckCircle, ShieldAlert, Award, ChevronLeft, ChevronRight, Check
@@ -94,7 +95,13 @@ export default function App() {
   const [currentView, setView] = useState<'home' | 'info' | 'admin'>(() => {
     if (typeof window !== "undefined") {
       const path = window.location.pathname;
-      if (path === "/admin") return 'admin';
+      if (path === "/admin") {
+        const hasToken = localStorage.getItem("zwdha_admin_token");
+        if (hasToken) return 'admin';
+        // Prevent direct unauthenticated URL access - redirect to home
+        window.history.replaceState({}, "", "/");
+        return 'home';
+      }
       if (path === "/info") return 'info';
     }
     return 'home';
@@ -107,7 +114,13 @@ export default function App() {
     const handlePopState = () => {
       const path = window.location.pathname;
       if (path === "/admin") {
-        setView("admin");
+        const hasToken = localStorage.getItem("zwdha_admin_token");
+        if (hasToken) {
+          setView("admin");
+        } else {
+          window.history.replaceState({}, "", "/");
+          setView("home");
+        }
       } else if (path === "/info") {
         setView("info");
       } else {
@@ -120,14 +133,21 @@ export default function App() {
   }, []);
 
   const handleSetView = (view: 'home' | 'info' | 'admin') => {
-    setView(view);
-    if (typeof window !== "undefined") {
-      if (view === 'admin') {
+    if (view === 'admin') {
+      const hasToken = localStorage.getItem("zwdha_admin_token");
+      // Allow going to admin if we navigated via direct interaction (e.g., clicking 'زد')
+      setView('admin');
+      if (typeof window !== "undefined") {
         window.history.pushState({}, "", "/admin");
-      } else if (view === 'info') {
-        window.history.pushState({}, "", "/info");
-      } else {
-        window.history.pushState({}, "", "/");
+      }
+    } else {
+      setView(view);
+      if (typeof window !== "undefined") {
+        if (view === 'info') {
+          window.history.pushState({}, "", "/info");
+        } else {
+          window.history.pushState({}, "", "/");
+        }
       }
     }
   };
@@ -264,12 +284,25 @@ export default function App() {
     return `${Math.round(val * 100) / 100} ${symbol}`;
   };
 
-  // Render Platform Icon
+  // Render Platform Icon with dynamic pulsating and hover rotation animations
   const renderPlatformIcon = (platform: string) => {
-    if (platform === "Instagram") return <Instagram className="w-5 h-5 text-pink-500" />;
-    if (platform === "Facebook") return <Facebook className="w-5 h-5 text-blue-500" />;
-    if (platform === "YouTube") return <Youtube className="w-5 h-5 text-red-500" />;
-    return <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />;
+    const iconClass = "w-5 h-5 transition-transform duration-300";
+    let icon = <Star className={`${iconClass} text-yellow-500 fill-yellow-500`} />;
+    if (platform === "Instagram") icon = <Instagram className={`${iconClass} text-pink-500`} />;
+    if (platform === "Facebook") icon = <Facebook className={`${iconClass} text-blue-500`} />;
+    if (platform === "YouTube") icon = <Youtube className={`${iconClass} text-red-500`} />;
+
+    return (
+      <motion.div
+        animate={{ scale: [1, 1.12, 1] }}
+        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        whileHover={{ rotate: 18, scale: 1.25 }}
+        whileTap={{ scale: 0.85 }}
+        className="flex items-center justify-center inline-block cursor-pointer"
+      >
+        {icon}
+      </motion.div>
+    );
   };
 
   // Filter package cards
@@ -313,44 +346,48 @@ export default function App() {
               <div className="animate-fade-in">
                 
                 {/* Hero Section */}
-                <section className="relative py-20 md:py-28 text-center overflow-hidden border-b border-neutral-800/20 bg-gradient-to-b from-purple-900/10 via-transparent to-transparent">
-                  <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 relative z-10">
+                <section className="relative py-10 md:py-16 text-center overflow-hidden border-b border-neutral-800/20 bg-gradient-to-b from-purple-900/10 via-transparent to-transparent">
+                  <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4 relative z-10">
                     
                     {/* Glowing Accent Pill */}
-                    <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-white bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-2 rounded-full shadow-lg shadow-pink-500/10 animate-bounce-slow">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-white bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-1.5 rounded-full shadow-lg shadow-pink-500/10 animate-bounce-slow">
                       <Sparkles className="w-3.5 h-3.5 animate-spin" />
                       <span>متجر معتمد وموثوق 100% لتزويد خدمات التواصل</span>
                     </span>
 
-                    <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight leading-[1.25] text-transparent bg-clip-text bg-gradient-to-r from-white via-neutral-100 to-neutral-400">
+                    <h1 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tight leading-[1.25] text-transparent bg-clip-text bg-gradient-to-r from-white via-neutral-100 to-neutral-400">
                       ضخم حضورك الرقمي مع <br className="hidden sm:inline" />
                       <span className="bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 bg-clip-text text-transparent">
                         زودها ZWDHA
                       </span>
                     </h1>
 
-                    <p className="text-sm sm:text-base text-neutral-400 max-w-2xl mx-auto leading-relaxed">
+                    <p className="text-xs sm:text-sm text-neutral-400 max-w-xl mx-auto leading-relaxed">
                       الوجهة المثالية في مصر والوطن العربي لتزويد المتابعين، اللايكات، المشتركين والتقييمات بجودة لا مثيل لها وبثقة تامة مع حماية خصوصية حسابك وضمان تعويض مجاني مدى الحياة.
                     </p>
 
                     {/* CTA buttons */}
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-                      <a
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+                      <motion.a
                         id="hero-cta-browse"
                         href="#store-section"
-                        className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 hover:opacity-95 text-white font-extrabold text-sm shadow-xl shadow-pink-500/15 text-center transition-all cursor-pointer"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="w-full sm:w-auto px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 hover:opacity-95 text-white font-extrabold text-xs shadow-xl shadow-pink-500/15 text-center transition-all cursor-pointer"
                       >
                         تصفح باقات الخدمات المتاحة
-                      </a>
-                      <button
+                      </motion.a>
+                      <motion.button
                         id="hero-cta-info"
                         onClick={() => setView('info')}
-                        className={`w-full sm:w-auto px-8 py-4 rounded-xl border text-sm font-bold text-center transition-all cursor-pointer ${
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className={`w-full sm:w-auto px-6 py-3 rounded-xl border text-xs font-bold text-center transition-all cursor-pointer ${
                           darkMode ? "border-neutral-800 hover:bg-neutral-800 text-white" : "border-neutral-200 hover:bg-neutral-100 text-neutral-900"
                         }`}
                       >
                         تعرّف على سياسة الضمان لدينا
-                      </button>
+                      </motion.button>
                     </div>
 
                   </div>
@@ -361,10 +398,10 @@ export default function App() {
                 </section>
 
                 {/* SMM Store Services Section */}
-                <section id="store-section" className="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <section id="store-section" className="py-8 sm:py-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                   
                   {/* Category Filter and Search */}
-                  <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-12 border-b border-neutral-800/15 pb-8">
+                  <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-6 border-b border-neutral-800/15 pb-4">
                     
                     {/* 4 Separate Service Categories tabs (Facebook, Instagram, YouTube, Google Reviews) */}
                     <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
@@ -374,10 +411,12 @@ export default function App() {
                         { id: 'YouTube', label: 'يوتيوب YouTube' },
                         { id: 'Google Reviews', label: 'تقييمات جوجلReviews' }
                       ] as const).map((platform) => (
-                        <button
+                        <motion.button
                           key={platform.id}
                           id={`platform-filter-tab-${platform.id.replace(' ', '-')}`}
                           onClick={() => { setSelectedPlatform(platform.id); setSearchQuery(""); }}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
                           className={`px-5 py-3 text-xs font-black rounded-xl border transition-all flex items-center gap-2 cursor-pointer ${
                             selectedPlatform === platform.id
                               ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white border-transparent shadow-md"
@@ -388,7 +427,7 @@ export default function App() {
                         >
                           {renderPlatformIcon(platform.id)}
                           <span>{platform.label}</span>
-                        </button>
+                        </motion.button>
                       ))}
                     </div>
 
@@ -419,9 +458,11 @@ export default function App() {
                       filteredPackages.map((pack) => {
                         const style = getPackageStyle(pack.name, darkMode);
                         return (
-                          <div
+                          <motion.div
                             key={pack.id}
-                            className={`rounded-2xl border p-6 flex flex-col justify-between transition-all duration-300 relative group hover:scale-[1.02] overflow-hidden ${style.cardClass}`}
+                            whileHover={{ y: -8, scale: 1.02 }}
+                            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                            className={`rounded-2xl border p-6 flex flex-col justify-between transition-all duration-300 relative group overflow-hidden ${style.cardClass}`}
                           >
                             {/* Inner body wrapper to allow custom layouts */}
                             <div className="w-full h-full flex flex-col justify-between relative z-10">
@@ -489,20 +530,22 @@ export default function App() {
                                   </span>
                                 </div>
 
-                                <button
+                                <motion.button
                                   id={`pkg-order-btn-${pack.id}`}
                                   onClick={() => setSelectedPackage(pack)}
-                                  className={`px-5 py-2.5 rounded-xl font-extrabold text-xs active:scale-95 transition-all cursor-pointer ${style.buttonClass}`}
+                                  whileHover={{ scale: 1.05 }}
+                                  whileTap={{ scale: 0.95 }}
+                                  className={`px-5 py-2.5 rounded-xl font-extrabold text-xs transition-all cursor-pointer ${style.buttonClass}`}
                                 >
                                   اطلب الآن 🚀
-                                </button>
+                                </motion.button>
                               </div>
 
                             </div>
 
                             {/* Glow/reflect premium backgrounds */}
                             <div className={`${style.glowBg}`} />
-                          </div>
+                          </motion.div>
                         );
                       })
                     )}

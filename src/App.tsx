@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   Sparkles, Search, MessageCircle, Phone, ArrowLeft, Facebook, Instagram, 
-  Youtube, Star, CheckCircle, ShieldAlert, Award, ChevronLeft, ChevronRight, Check
+  Youtube, Star, CheckCircle, ShieldAlert, Award, ChevronLeft, ChevronRight, Check,
+  Clock, CreditCard, RefreshCw, AlertCircle, Gift
 } from "lucide-react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -13,6 +14,7 @@ import OrderModal from "./components/OrderModal";
 import CompanyInfo from "./components/CompanyInfo";
 import AdminPanel from "./components/AdminPanel";
 import SplashScreen from "./components/SplashScreen";
+import DailyGiftModal from "./components/DailyGiftModal";
 import { Package, Review, StoreSettings } from "./types";
 
 const getPackageStyle = (packageName: string, darkMode: boolean) => {
@@ -20,65 +22,69 @@ const getPackageStyle = (packageName: string, darkMode: boolean) => {
   if (name.includes("الفضية")) {
     return {
       cardClass: darkMode 
-        ? "bg-gradient-to-b from-neutral-800/40 to-neutral-950/60 border-neutral-750 hover:border-neutral-500 hover:shadow-lg hover:shadow-neutral-500/5" 
-        : "bg-gradient-to-b from-neutral-100/70 to-neutral-200/40 border-neutral-300 hover:border-neutral-400 hover:shadow-md hover:shadow-neutral-400/10",
+        ? "bg-gradient-to-b from-neutral-800/40 to-neutral-950/60 border-purple-500/20 hover:border-purple-500 hover:shadow-lg hover:shadow-purple-500/5" 
+        : "bg-gradient-to-b from-neutral-100/70 to-neutral-200/40 border-pink-500/20 hover:border-pink-500 hover:shadow-md hover:shadow-pink-500/10",
       accentText: darkMode
         ? "bg-gradient-to-r from-neutral-300 via-neutral-100 to-neutral-400 bg-clip-text text-transparent font-black"
         : "bg-gradient-to-r from-neutral-600 via-neutral-400 to-neutral-700 bg-clip-text text-transparent font-black",
-      badgeClass: "bg-neutral-500/10 text-neutral-450 border border-neutral-500/20",
+      badgeClass: "bg-pink-500/5 text-pink-500 dark:text-purple-400 border border-pink-500/30 dark:border-purple-500/30",
       badgeText: "التميز الفضي 🪙",
-      buttonClass: "bg-neutral-800 hover:bg-neutral-700 text-white shadow-sm dark:bg-neutral-900 dark:hover:bg-neutral-800",
-      glowBg: "absolute -inset-px rounded-2xl bg-gradient-to-r from-neutral-500/10 via-transparent to-neutral-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+      buttonClass: "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-sm hover:opacity-90",
+      glowBg: "absolute -inset-px rounded-2xl bg-gradient-to-r from-purple-500/10 via-transparent to-pink-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
     };
   } else if (name.includes("الذهبية")) {
     return {
       cardClass: darkMode 
-        ? "bg-gradient-to-b from-amber-950/15 via-[#0d0b05] to-[#070603] border-amber-500/30 hover:border-amber-400 hover:shadow-xl hover:shadow-amber-500/10" 
-        : "bg-gradient-to-b from-amber-50/40 to-amber-100/20 border-amber-300/80 hover:border-amber-400 hover:shadow-lg hover:shadow-amber-400/10",
+        ? "bg-gradient-to-b from-amber-950/15 via-[#0d0b05] to-[#070603] border-purple-500/20 hover:border-purple-500 hover:shadow-xl hover:shadow-purple-500/10" 
+        : "bg-gradient-to-b from-amber-50/40 to-amber-100/20 border-pink-500/20 hover:border-pink-500 hover:shadow-lg hover:shadow-pink-500/10",
       accentText: "bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 bg-clip-text text-transparent font-black",
-      badgeClass: "bg-amber-500/10 text-amber-500 border border-amber-500/20",
+      badgeClass: "bg-pink-500/5 text-amber-500 border border-pink-500/30 dark:border-purple-500/30",
       badgeText: "الذهبي الملكي 👑",
-      buttonClass: "bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-extrabold hover:opacity-95 shadow-md shadow-amber-500/10",
-      glowBg: "absolute -inset-px rounded-2xl bg-gradient-to-r from-amber-500/10 via-transparent to-amber-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+      buttonClass: "bg-gradient-to-r from-purple-600 to-pink-600 text-white font-extrabold hover:opacity-95 shadow-md shadow-pink-500/10",
+      glowBg: "absolute -inset-px rounded-2xl bg-gradient-to-r from-purple-500/10 via-transparent to-pink-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
     };
   } else if (name.includes("البلاتينية")) {
     return {
       cardClass: darkMode 
-        ? "bg-gradient-to-b from-slate-800/30 via-neutral-950/60 to-black border-slate-700/60 hover:border-slate-400 hover:shadow-lg hover:shadow-slate-400/5" 
-        : "bg-gradient-to-b from-slate-100/60 to-slate-200/30 border-slate-300 hover:border-slate-400 hover:shadow-md hover:shadow-slate-400/10",
+        ? "bg-gradient-to-b from-slate-800/30 via-neutral-950/60 to-black border-purple-500/20 hover:border-purple-500 hover:shadow-lg hover:shadow-purple-500/5" 
+        : "bg-gradient-to-b from-slate-100/60 to-slate-200/30 border-pink-500/20 hover:border-pink-500 hover:shadow-md hover:shadow-pink-500/10",
       accentText: darkMode
         ? "bg-gradient-to-r from-slate-300 via-slate-100 to-slate-400 bg-clip-text text-transparent font-black"
         : "bg-gradient-to-r from-slate-600 via-slate-400 to-slate-700 bg-clip-text text-transparent font-black",
-      badgeClass: "bg-slate-500/10 text-slate-400 border border-slate-500/20",
+      badgeClass: "bg-pink-500/5 text-slate-400 border border-pink-500/30 dark:border-purple-500/30",
       badgeText: "البلاتيني الفاخر 💎",
-      buttonClass: "bg-slate-800 hover:bg-slate-700 text-white dark:bg-slate-900 dark:hover:bg-slate-800",
-      glowBg: "absolute -inset-px rounded-2xl bg-gradient-to-r from-slate-500/10 via-transparent to-slate-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+      buttonClass: "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-sm hover:opacity-90",
+      glowBg: "absolute -inset-px rounded-2xl bg-gradient-to-r from-purple-500/10 via-transparent to-pink-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
     };
   } else if (name.includes("الماسية")) {
     return {
       cardClass: darkMode 
-        ? "bg-gradient-to-b from-[#081520] via-neutral-950/80 to-[#03080c] border-cyan-500/20 hover:border-cyan-400 hover:shadow-xl hover:shadow-cyan-500/10" 
-        : "bg-gradient-to-b from-cyan-50/50 via-blue-50/30 to-white border-cyan-300 hover:border-cyan-400 hover:shadow-lg hover:shadow-cyan-400/10",
+        ? "bg-gradient-to-b from-[#081520] via-neutral-950/80 to-[#03080c] border-purple-500/20 hover:border-purple-500 hover:shadow-xl hover:shadow-purple-500/10" 
+        : "bg-gradient-to-b from-cyan-50/50 via-blue-50/30 to-white border-pink-500/20 hover:border-pink-500 hover:shadow-lg hover:shadow-pink-500/10",
       accentText: "bg-gradient-to-r from-cyan-400 via-blue-300 to-indigo-400 bg-clip-text text-transparent font-black",
-      badgeClass: "bg-cyan-500/10 text-cyan-450 border border-cyan-500/20",
+      badgeClass: "bg-pink-500/5 text-cyan-450 border border-pink-500/30 dark:border-purple-500/30",
       badgeText: "الوهج الماسي ✨",
-      buttonClass: "bg-gradient-to-r from-cyan-500 to-indigo-500 text-white hover:opacity-95 shadow-md shadow-cyan-500/10",
-      glowBg: "absolute -inset-px rounded-2xl bg-gradient-to-r from-cyan-500/10 via-transparent to-cyan-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+      buttonClass: "bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:opacity-95 shadow-md shadow-pink-500/10",
+      glowBg: "absolute -inset-px rounded-2xl bg-gradient-to-r from-purple-500/10 via-transparent to-pink-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
     };
   } else if (name.includes("النخبة")) {
     return {
-      cardClass: "bg-gradient-to-b from-[#080808] via-neutral-950 to-black border-2 border-amber-500/80 shadow-2xl hover:shadow-amber-500/20 ring-1 ring-amber-500/20 hover:border-amber-400",
+      cardClass: darkMode
+        ? "bg-gradient-to-b from-[#080808] via-neutral-950 to-black border-2 border-purple-500/80 shadow-2xl hover:shadow-purple-500/20 ring-1 ring-purple-500/20 hover:border-purple-400"
+        : "bg-gradient-to-b from-yellow-50/10 to-white border-2 border-pink-500 shadow-2xl hover:shadow-pink-500/20 ring-1 ring-pink-500/20 hover:border-pink-400",
       accentText: "bg-gradient-to-r from-yellow-500 via-amber-300 to-yellow-600 bg-clip-text text-transparent font-black",
-      badgeClass: "bg-gradient-to-r from-yellow-500/20 to-amber-500/20 text-amber-400 border border-amber-500/30",
+      badgeClass: "bg-pink-500/5 text-amber-400 border border-pink-500/30 dark:border-purple-500/30",
       badgeText: "باقة النخبة VIP 🌟",
-      buttonClass: "bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-600 text-black font-black hover:opacity-95 shadow-md shadow-amber-500/20",
-      glowBg: "absolute -inset-px rounded-2xl bg-gradient-to-r from-amber-400/15 via-transparent to-amber-500/15 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+      buttonClass: "bg-gradient-to-r from-purple-600 to-pink-600 text-white font-black hover:opacity-95 shadow-md",
+      glowBg: "absolute -inset-px rounded-2xl bg-gradient-to-r from-purple-400/15 via-transparent to-pink-500/15 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
     };
   }
   return {
-    cardClass: darkMode ? "bg-neutral-950 border-neutral-900" : "bg-white border-neutral-200 shadow-md",
+    cardClass: darkMode 
+      ? "bg-neutral-950 border border-purple-500/20 hover:border-purple-500" 
+      : "bg-white border border-pink-500/20 hover:border-pink-500 shadow-md",
     accentText: "text-white",
-    badgeClass: "bg-neutral-500/10 text-neutral-450",
+    badgeClass: "bg-pink-500/5 text-pink-500 dark:text-purple-400 border border-pink-500/20 dark:border-purple-500/20",
     badgeText: "باقة متميزة",
     buttonClass: "bg-gradient-to-r from-purple-600 to-pink-600 text-white",
     glowBg: ""
@@ -161,8 +167,47 @@ export default function App() {
   const [selectedPlatform, setSelectedPlatform] = useState<'Facebook' | 'Instagram' | 'YouTube' | 'Google Reviews'>('Instagram');
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Tracking state
+  const [trackUrl, setTrackUrl] = useState("");
+  const [trackedOrder, setTrackedOrder] = useState<any | null>(null);
+  const [trackLoading, setTrackLoading] = useState(false);
+  const [trackError, setTrackError] = useState("");
+
+  const handleTrackOrder = async (urlStr: string) => {
+    const url = urlStr.trim();
+    if (!url) {
+      setTrackError("الرجاء إدخال رابط الحساب أو الصفحة لتتبع الطلب");
+      setTrackedOrder(null);
+      return;
+    }
+
+    setTrackLoading(true);
+    setTrackError("");
+    try {
+      const res = await fetch("/api/orders/track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pageUrl: url })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTrackedOrder(data);
+      } else {
+        const errData = await res.json();
+        setTrackError(errData.error || "لم يتم العثور على أي طلبات مرتبطة برابط هذا الحساب أو الصفحة");
+        setTrackedOrder(null);
+      }
+    } catch (error) {
+      setTrackError("حدث خطأ أثناء الاتصال بالخادم. الرجاء المحاولة مجدداً.");
+      setTrackedOrder(null);
+    } finally {
+      setTrackLoading(false);
+    }
+  };
+
   // Checkout modal
   const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
+  const [isGiftModalOpen, setIsGiftModalOpen] = useState(false);
 
   // Loading states
   const [loading, setLoading] = useState(true);
@@ -311,11 +356,7 @@ export default function App() {
 
   // Filter package cards
   const filteredPackages = packages.filter((p) => {
-    const matchesPlatform = p.platform === selectedPlatform;
-    const matchesSearch = 
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      p.description.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesPlatform && matchesSearch;
+    return p.platform === selectedPlatform;
   });
 
   return (
@@ -394,6 +435,20 @@ export default function App() {
                       </motion.button>
                     </div>
 
+                    {/* Daily Free Gift Button */}
+                    <div className="mt-4 flex justify-center">
+                      <motion.button
+                        id="hero-cta-daily-gift"
+                        onClick={() => setIsGiftModalOpen(true)}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="flex items-center gap-2 px-6 py-3.5 rounded-xl text-xs font-black text-white bg-gradient-to-r from-amber-500 via-orange-500 to-pink-500 hover:opacity-95 cursor-pointer shadow-lg shadow-orange-500/10 border border-amber-400/20"
+                      >
+                        <Gift className="w-4 h-4 text-white animate-bounce" />
+                        <span>🎁 هدايا يومية مجانية (لايكات ومتابعين)</span>
+                      </motion.button>
+                    </div>
+
                   </div>
 
                   {/* Aesthetic Background Orbs */}
@@ -405,10 +460,10 @@ export default function App() {
                 <section id="store-section" className="py-8 sm:py-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                   
                   {/* Category Filter and Search */}
-                  <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-6 border-b border-neutral-800/15 pb-4">
+                  <div className="flex flex-col lg:flex-row items-center justify-between gap-6 mb-6 border-b border-neutral-800/15 pb-4">
                     
                     {/* 4 Separate Service Categories tabs (Facebook, Instagram, YouTube, Google Reviews) */}
-                    <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                    <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
                       {([
                         { id: 'Instagram', label: 'إنستقرام Instagram' },
                         { id: 'Facebook', label: 'فيسبوك Facebook' },
@@ -425,8 +480,8 @@ export default function App() {
                             selectedPlatform === platform.id
                               ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white border-transparent shadow-md"
                               : darkMode
-                                ? "bg-neutral-950 border-neutral-900 hover:border-neutral-800 text-neutral-400 hover:text-white"
-                                : "bg-white border-neutral-200 hover:bg-neutral-100 text-neutral-600 hover:text-neutral-900 shadow-sm"
+                                ? "bg-neutral-950 border-purple-500/30 hover:border-purple-500 text-neutral-400 hover:text-white"
+                                : "bg-white border-pink-500/30 hover:border-pink-500 text-neutral-600 hover:text-neutral-900 shadow-sm"
                           }`}
                         >
                           {renderPlatformIcon(platform.id)}
@@ -435,22 +490,159 @@ export default function App() {
                       ))}
                     </div>
 
-                    {/* Live search bar */}
-                    <div className="relative w-full md:w-80 shrink-0">
-                      <input
-                        id="home-search-bar"
-                        type="text"
-                        placeholder={`ابحث داخل باقات ${selectedPlatform}...`}
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className={`w-full text-xs p-3.5 pr-11 rounded-xl border focus:outline-none focus:border-pink-500 ${
-                          darkMode ? "bg-neutral-950 border-neutral-900 text-white" : "bg-white border-neutral-200 text-neutral-900"
-                        }`}
-                      />
-                      <Search className="w-4 h-4 text-neutral-500 absolute top-4 right-4" />
+                    {/* Order Tracking widget */}
+                    <div className="w-full lg:w-[420px] shrink-0 space-y-2">
+                      <div className="text-right">
+                        <label className={`text-[11px] font-black leading-relaxed block ${darkMode ? "text-purple-300" : "text-pink-600"}`}>
+                          💡 أدخل رابط حسابك أو الصفحة لتتبع طلبك لحظياً:
+                        </label>
+                      </div>
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <input
+                            id="order-track-input"
+                            type="text"
+                            placeholder="مثال: https://instagram.com/username"
+                            value={trackUrl}
+                            onChange={(e) => setTrackUrl(e.target.value)}
+                            className={`w-full text-xs p-3.5 pr-11 text-right rounded-xl border focus:outline-none focus:border-pink-500 ${
+                              darkMode ? "bg-neutral-950 border-purple-500/30 text-white" : "bg-white border-pink-500/30 text-neutral-900"
+                            }`}
+                          />
+                          <Search className="w-4 h-4 text-neutral-400 absolute top-3.5 right-4" />
+                        </div>
+                        <button
+                          onClick={() => handleTrackOrder(trackUrl)}
+                          disabled={trackLoading}
+                          className="px-5 py-3 text-xs font-black rounded-xl flex items-center justify-center gap-1.5 transition-all text-white bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 shrink-0 cursor-pointer"
+                        >
+                          {trackLoading ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Search className="w-3.5 h-3.5" />
+                          )}
+                          <span>تتبع طلبك</span>
+                        </button>
+                      </div>
                     </div>
 
                   </div>
+
+                  {/* Tracking Results or Errors panel */}
+                  <AnimatePresence>
+                    {(trackedOrder || trackError) && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -15, height: 0 }}
+                        animate={{ opacity: 1, y: 0, height: "auto" }}
+                        exit={{ opacity: 0, y: -15, height: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="mb-8 overflow-hidden"
+                      >
+                        {trackError ? (
+                          <div className={`p-4 rounded-xl border flex items-center gap-2 text-right text-xs font-bold ${
+                            darkMode ? "bg-red-500/10 border-red-500/20 text-red-400" : "bg-red-50 border-red-200 text-red-600"
+                          }`}>
+                            <AlertCircle className="w-4 h-4 shrink-0" />
+                            <span>{trackError}</span>
+                          </div>
+                        ) : (
+                          <div className={`p-5 rounded-2xl border text-right space-y-4 relative ${
+                            darkMode ? "bg-neutral-900/95 border-purple-500/40 text-white" : "bg-white border-pink-500/25 text-neutral-900 shadow-lg"
+                          }`}>
+                            {/* Header row with a glowing Live tag and clear button */}
+                            <div className="flex items-center justify-between border-b border-neutral-800/15 pb-3">
+                              <div className="flex items-center gap-2">
+                                <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
+                                <h4 className="text-[11px] font-black text-neutral-400 uppercase tracking-wider">تحديثات الطلب لحظة بلحظة</h4>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <button 
+                                  onClick={() => handleTrackOrder(trackUrl)}
+                                  className="text-[10px] text-pink-500 hover:text-pink-400 flex items-center gap-1 font-bold"
+                                >
+                                  <RefreshCw className={`w-3 h-3 ${trackLoading ? 'animate-spin' : ''}`} />
+                                  <span>تحديث فوري</span>
+                                </button>
+                                <button 
+                                  onClick={() => { setTrackedOrder(null); setTrackError(""); setTrackUrl(""); }}
+                                  className="text-[10px] text-neutral-500 hover:text-neutral-400 font-bold"
+                                >
+                                  إغلاق [✕]
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Data grid */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
+                              <div className="space-y-1">
+                                <span className="text-[10px] text-neutral-405 block">صاحب الطلب:</span>
+                                <span className="font-bold text-neutral-200">{trackedOrder.customerName}</span>
+                              </div>
+                              <div className="space-y-1">
+                                <span className="text-[10px] text-neutral-405 block">الباقة المشتراة والمنصة:</span>
+                                <span className="font-extrabold text-pink-500">{trackedOrder.packageName} ({trackedOrder.platform})</span>
+                              </div>
+                              <div className="space-y-1">
+                                <span className="text-[10px] text-neutral-405 block">حالة الطلب في المتجر:</span>
+                                <div>
+                                  {trackedOrder.status === 'New' && (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-red-500/10 text-red-400 border border-red-500/20">
+                                      <Clock className="w-3 h-3" /> جديد / قيد المراجعة 🔔
+                                    </span>
+                                  )}
+                                  {trackedOrder.status === 'Contacted' && (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                      <MessageCircle className="w-3 h-3 text-blue-400" /> جاري التحضير والتجهيز 💬
+                                    </span>
+                                  )}
+                                  {trackedOrder.status === 'Completed' && (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-green-500/10 text-green-400 border border-green-500/20">
+                                      <CheckCircle className="w-3 h-3 text-green-400" /> مكتمل وجاهز ✓
+                                    </span>
+                                  )}
+                                  {trackedOrder.status === 'Cancelled' && (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-neutral-500/10 text-neutral-400 border border-neutral-500/20">
+                                      ملغي ✕
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="space-y-1">
+                                <span className="text-[10px] text-neutral-405 block">حالة عملية التحويل المالي:</span>
+                                <div>
+                                  {trackedOrder.paymentStatus === 'مدفوع' ? (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-green-500/10 text-green-400 border border-green-500/20">
+                                      <CreditCard className="w-3 h-3 text-green-400" /> تم تأكيد الدفع بنجاح 💳
+                                    </span>
+                                  ) : trackedOrder.paymentStatus === 'مرفوض' ? (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-red-500/10 text-red-400 border border-red-500/20">
+                                      <ShieldAlert className="w-3 h-3 text-red-400" /> تم رفض التحويل ✕
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                      <Clock className="w-3 h-3" /> بانتظار تأكيد التحويل ⏳
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="space-y-1">
+                                <span className="text-[10px] text-neutral-405 block">طريقة التحويل والمبلغ:</span>
+                                <span className="font-bold text-neutral-200">
+                                  {trackedOrder.paymentMethod === 'vodafone' ? 'فودافون كاش' : trackedOrder.paymentMethod === 'instapay' ? 'إنستا باي' : 'تواصل عبر واتساب'} - {trackedOrder.price} {trackedOrder.currency}
+                                </span>
+                              </div>
+                              <div className="space-y-1">
+                                <span className="text-[10px] text-neutral-405 block">تاريخ الطلب:</span>
+                                <span className="text-neutral-400 font-mono">
+                                  {new Date(trackedOrder.createdAt).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' })}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
                   {/* Package cards grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
@@ -639,6 +831,13 @@ export default function App() {
           darkMode={darkMode}
         />
       )}
+
+      {/* Daily Free Gift Popup Modal */}
+      <DailyGiftModal
+        isOpen={isGiftModalOpen}
+        onClose={() => setIsGiftModalOpen(false)}
+        darkMode={darkMode}
+      />
 
       {/* Floating social contact parameters - ONLY render if not in admin view */}
       {currentView !== 'admin' && <FloatingButtons />}

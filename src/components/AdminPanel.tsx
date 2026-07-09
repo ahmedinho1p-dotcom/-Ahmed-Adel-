@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { 
   Lock, Key, Users, ShoppingBag, Landmark, Percent, Settings, Mail, Phone,
   TrendingUp, Sparkles, AlertCircle, CheckCircle, Clock, Trash2, Edit, Plus, 
-  Eye, EyeOff, ArrowUp, ArrowDown, LogOut, Check, RefreshCw, MessageSquare, ExternalLink, ArrowLeft, RefreshCw as SpinIcon
+  Eye, EyeOff, ArrowUp, ArrowDown, LogOut, Check, RefreshCw, MessageSquare, ExternalLink, ArrowLeft, RefreshCw as SpinIcon,
+  Wallet, Gift
 } from "lucide-react";
 import { Package, Order, Coupon, StoreSettings, DashboardStats } from "../types";
 
@@ -76,6 +77,10 @@ export default function AdminPanel({ darkMode, currency, onSettingsUpdated }: Ad
   const [settEtisalatCash, setSettEtisalatCash] = useState("");
   const [settWePay, setSettWePay] = useState("");
   const [settInstapay, setSettInstapay] = useState("");
+  const [settDailyGiftType, setSettDailyGiftType] = useState("لايك");
+  const [settDailyGiftQty, setSettDailyGiftQty] = useState("50");
+  const [settDailyGiftPlatform, setSettDailyGiftPlatform] = useState("Instagram");
+  const [settDailyGiftActive, setSettDailyGiftActive] = useState(true);
   const [newAdminPassword, setNewAdminPassword] = useState("");
 
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
@@ -145,6 +150,10 @@ export default function AdminPanel({ darkMode, currency, onSettingsUpdated }: Ad
         setSettEtisalatCash(settingsData.etisalat_cash_number || "01124656914");
         setSettWePay(settingsData.we_pay_number || "01124656914");
         setSettInstapay(settingsData.instapay_number || "01558676497");
+        setSettDailyGiftType(settingsData.daily_gift_type || "لايك");
+        setSettDailyGiftQty(settingsData.daily_gift_qty || "50");
+        setSettDailyGiftPlatform(settingsData.daily_gift_platform || "Instagram");
+        setSettDailyGiftActive(settingsData.daily_gift_active !== "false");
       }
 
       // Get Stats
@@ -474,6 +483,10 @@ export default function AdminPanel({ darkMode, currency, onSettingsUpdated }: Ad
       etisalat_cash_number: settEtisalatCash,
       we_pay_number: settWePay,
       instapay_number: settInstapay,
+      daily_gift_type: settDailyGiftType,
+      daily_gift_qty: settDailyGiftQty,
+      daily_gift_platform: settDailyGiftPlatform,
+      daily_gift_active: settDailyGiftActive.toString(),
     };
 
     try {
@@ -1726,6 +1739,78 @@ export default function AdminPanel({ darkMode, currency, onSettingsUpdated }: Ad
                               required
                               value={settInstapay}
                               onChange={(e) => setSettInstapay(e.target.value)}
+                              className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none font-mono ${
+                                darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                              }`}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Section: Daily Free Gift settings */}
+                      <div className={`p-6 rounded-2xl border ${
+                        darkMode ? "bg-neutral-900/30 border-neutral-800" : "bg-neutral-50 border-neutral-200"
+                      }`}>
+                        <h3 className="font-bold mb-4 text-xs flex items-center gap-2">
+                          <Gift className="w-4 h-4 text-pink-500 animate-pulse" />
+                          إعدادات الهدية اليومية المجانية (تعديل الهدية والمنصة) 🎁
+                        </h3>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                          <div>
+                            <label className="block text-[11px] font-bold text-neutral-400 mb-1">حالة الهدية اليومية</label>
+                            <select
+                              value={settDailyGiftActive ? "true" : "false"}
+                              onChange={(e) => setSettDailyGiftActive(e.target.value === "true")}
+                              className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none ${
+                                darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                              }`}
+                            >
+                              <option value="true">مفعلة ومتاحة للزوار</option>
+                              <option value="false">معطلة ومخفية</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-bold text-neutral-400 mb-1">المنصة المستهدفة</label>
+                            <select
+                              value={settDailyGiftPlatform}
+                              onChange={(e) => setSettDailyGiftPlatform(e.target.value)}
+                              className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none ${
+                                darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                              }`}
+                            >
+                              <option value="Instagram">إنستقرام Instagram</option>
+                              <option value="Facebook">فيسبوك Facebook</option>
+                              <option value="YouTube">يوتيوب YouTube</option>
+                              <option value="TikTok">تيك توك TikTok</option>
+                              <option value="Google Reviews">تقييمات جوجل Google</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-bold text-neutral-400 mb-1">نوع الهدية اليومية</label>
+                            <select
+                              value={settDailyGiftType}
+                              onChange={(e) => setSettDailyGiftType(e.target.value)}
+                              className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none ${
+                                darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                              }`}
+                            >
+                              <option value="لايك">لايكات / تفاعلات (Likes)</option>
+                              <option value="متابع">متابعين (Followers)</option>
+                              <option value="مشاهدة">مشاهدات (Views)</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-bold text-neutral-400 mb-1">كمية الهدية (العدد)</label>
+                            <input
+                              type="number"
+                              required
+                              min={1}
+                              value={settDailyGiftQty}
+                              onChange={(e) => setSettDailyGiftQty(e.target.value)}
                               className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none font-mono ${
                                 darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
                               }`}

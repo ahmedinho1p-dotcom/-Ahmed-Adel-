@@ -80,8 +80,8 @@ export default function Header({
             whileTap={{ scale: 0.9 }}
             className={`hidden md:block p-2 rounded-lg border transition-all ${
               darkMode 
-                ? "bg-neutral-900 border-neutral-800 hover:bg-neutral-800 text-yellow-400" 
-                : "bg-neutral-100 border-neutral-200 hover:bg-neutral-200 text-neutral-800"
+                ? "bg-neutral-900 border-purple-500/30 hover:border-purple-500 text-yellow-400" 
+                : "bg-neutral-100 border-pink-500/30 hover:border-pink-500 text-neutral-800"
             }`}
             title={darkMode ? "الوضع النهاري" : "الوضع الليلي"}
           >
@@ -96,7 +96,7 @@ export default function Header({
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               className={`p-2 rounded-lg border ${
-                darkMode ? "bg-neutral-900 border-neutral-800 text-yellow-400" : "bg-neutral-100 border-neutral-200 text-neutral-800"
+                darkMode ? "bg-neutral-900 border-purple-500/30 text-yellow-400" : "bg-neutral-100 border-pink-500/30 text-neutral-800"
               }`}
             >
               {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
@@ -172,7 +172,7 @@ export default function Header({
           <div className="hidden md:flex items-center gap-2">
             <span className={`text-[10px] font-bold uppercase tracking-wider ${darkMode ? "text-neutral-500" : "text-neutral-400"}`}>العملة:</span>
             <div className={`flex items-center rounded-lg p-0.5 border ${
-              darkMode ? "bg-neutral-900 border-neutral-800" : "bg-neutral-100 border-neutral-200"
+              darkMode ? "bg-neutral-900 border-purple-500/30" : "bg-neutral-100 border-pink-500/30"
             }`}>
               {(['EGP', 'SAR', 'USD'] as const).map((curr) => (
                 <motion.button
@@ -196,14 +196,14 @@ export default function Header({
           </div>
 
           {/* Mobile Right Controls */}
-          <div className="flex md:hidden items-center gap-2">
+          <div className="flex md:hidden items-center gap-3">
             {/* Fast Mobile Currency Dropdown */}
             <select
               id="mobile-currency-select"
               value={currency}
               onChange={(e) => setCurrency(e.target.value as any)}
               className={`text-[10px] font-bold py-1 px-1.5 rounded-md border focus:outline-none ${
-                darkMode ? "bg-neutral-900 border-neutral-800 text-white" : "bg-neutral-100 border-neutral-200 text-neutral-900"
+                darkMode ? "bg-neutral-900 border-purple-500/30 text-white" : "bg-neutral-100 border-pink-500/30 text-neutral-900"
               }`}
             >
               <option value="EGP">ج.م</option>
@@ -218,7 +218,7 @@ export default function Header({
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               className={`p-2 rounded-lg border ${
-                darkMode ? "bg-neutral-900 border-neutral-800 text-white" : "bg-neutral-100 border-neutral-200 text-neutral-900"
+                darkMode ? "bg-neutral-900 border-purple-500/30 text-white" : "bg-neutral-100 border-pink-500/30 text-neutral-900"
               }`}
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}

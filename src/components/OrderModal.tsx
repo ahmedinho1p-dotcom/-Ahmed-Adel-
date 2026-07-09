@@ -21,7 +21,7 @@ interface OrderModalProps {
   darkMode: boolean;
 }
 
-type PaymentPath = 'whatsapp' | 'store';
+type PaymentPath = 'whatsapp' | 'store' | null;
 type StorePaymentMethod = 'vodafone' | 'orange' | 'etisalat' | 'we' | 'instapay';
 
 export default function OrderModal({
@@ -39,7 +39,7 @@ export default function OrderModal({
   const [couponCode, setCouponCode] = useState("");
 
   // Payment Path state
-  const [paymentPath, setPaymentPath] = useState<PaymentPath>('store'); // Default to direct checkout!
+  const [paymentPath, setPaymentPath] = useState<PaymentPath>(null); // Initialized to null as requested!
   const [selectedMethod, setSelectedMethod] = useState<StorePaymentMethod>('vodafone');
 
   // Direct checkout confirmation states
@@ -222,6 +222,11 @@ export default function OrderModal({
       return;
     }
 
+    if (!paymentPath) {
+      setSubmitError("الرجاء تحديد طريقة تأكيد الدفع قبل إرسال الطلب");
+      return;
+    }
+
     if (paymentPath === "store") {
       if (!paymentSender.trim()) {
         setSubmitError("الرجاء إدخال رقم الهاتف الذي قمت بالتحويل منه");
@@ -397,7 +402,7 @@ export default function OrderModal({
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
                     className={`w-full text-xs p-3 rounded-xl border focus:outline-none transition-all ${
-                      darkMode ? "bg-neutral-900 border-neutral-800 text-white focus:border-pink-500" : "bg-white border-neutral-200 text-neutral-900 focus:border-pink-500"
+                      darkMode ? "bg-neutral-900 border-purple-500/30 text-white focus:border-pink-500" : "bg-white border-pink-500/30 text-neutral-900 focus:border-pink-500"
                     }`}
                   />
                 </div>
@@ -411,7 +416,9 @@ export default function OrderModal({
                     placeholder="مثال: 01123456789"
                     value={whatsappNumber}
                     onChange={(e) => setWhatsappNumber(e.target.value)}
-                    className={`w-full text-xs p-3 rounded-xl border focus:outline-none transition-all font-mono text-left`}
+                    className={`w-full text-xs p-3 rounded-xl border focus:outline-none transition-all font-mono text-left ${
+                      darkMode ? "bg-neutral-900 border-purple-500/30 text-white focus:border-pink-500" : "bg-white border-pink-500/30 text-neutral-900 focus:border-pink-500"
+                    }`}
                     dir="ltr"
                   />
                 </div>
@@ -421,14 +428,18 @@ export default function OrderModal({
                 <label className="block text-[11px] font-bold text-neutral-400 mb-1.5 text-right">رابط الحساب أو الصفحة المستهدفة للتزويد</label>
                 <input
                   id="checkout-input-url"
-                  type="url"
+                  type="text"
                   required
-                  placeholder="https://www.instagram.com/username"
+                  placeholder="⚠️ تنبيه: يجب أن يكون الحساب عاماً (Public) وليس خاصاً"
                   value={pageUrl}
                   onChange={(e) => setPageUrl(e.target.value)}
-                  className={`w-full text-xs p-3 rounded-xl border focus:outline-none transition-all font-mono text-left`}
-                  dir="ltr"
+                  className={`w-full text-xs p-3 rounded-xl border focus:outline-none transition-all text-right ${
+                    darkMode ? "bg-neutral-900 border-purple-500/30 text-white focus:border-pink-500" : "bg-white border-pink-500/30 text-neutral-900 focus:border-pink-500"
+                  }`}
                 />
+                <span className="text-[10px] text-amber-500 font-bold block mt-1.5 text-right leading-relaxed">
+                  ⚠️ تنبيه هام: تأكد من أن حسابك عام (Public) وليس خاص (Private) لتلقي الخدمة بنجاح وتفادي تعليق الطلب.
+                </span>
               </div>
 
               {/* Coupon Field */}
@@ -440,7 +451,7 @@ export default function OrderModal({
                   value={couponCode}
                   onChange={(e) => setCouponCode(e.target.value)}
                   className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none uppercase ${
-                    darkMode ? "bg-neutral-900 border-neutral-800 text-white focus:border-pink-500" : "bg-white border-neutral-200 text-neutral-900 focus:border-pink-500"
+                    darkMode ? "bg-neutral-900 border-purple-500/30 text-white focus:border-pink-500" : "bg-white border-pink-500/30 text-neutral-900 focus:border-pink-500"
                   }`}
                 />
                 <button
@@ -525,12 +536,9 @@ export default function OrderModal({
                 {/* Method selector buttons */}
                 <div className="space-y-2">
                   <label className="block text-[10px] font-bold text-neutral-400 text-right">اختر وسيلة الدفع التي ستقوم بالتحويل إليها:</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     {([
                       { id: 'vodafone', name: 'فودافون كاش' },
-                      { id: 'orange', name: 'أورنج كاش' },
-                      { id: 'etisalat', name: 'اتصالات كاش' },
-                      { id: 'we', name: 'WE Pay' },
                       { id: 'instapay', name: 'إنستا باي' }
                     ] as const).map((method) => (
                       <button
@@ -713,10 +721,15 @@ export default function OrderModal({
                   <Check className="w-4 h-4" />
                   <span>تأكيد عملية الدفع وإرسال الطلب</span>
                 </>
-              ) : (
+              ) : paymentPath === 'whatsapp' ? (
                 <>
                   <MessageCircle className="w-4 h-4 fill-white" />
                   <span>تأكيد الطلب والمتابعة عبر الواتساب</span>
+                </>
+              ) : (
+                <>
+                  <CreditCard className="w-4 h-4" />
+                  <span>الرجاء تحديد طريقة الدفع لإرسال الطلب</span>
                 </>
               )}
             </button>

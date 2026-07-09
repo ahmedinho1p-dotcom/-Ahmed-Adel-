@@ -181,6 +181,56 @@ app.get("/api/packages", async (req, res) => {
   }
 });
 
+// Track Order by Page/Account URL (Public)
+app.post(
+  "/api/orders/track",
+  rateLimit(20, 60 * 1000, "تم إرسال عدد كبير من طلبات التتبع، الرجاء الانتظار دقيقة"),
+  async (req, res) => {
+    try {
+      const { pageUrl } = req.body;
+      if (!pageUrl || typeof pageUrl !== "string" || !pageUrl.trim()) {
+        return res.status(400).json({ error: "الرجاء إدخال رابط الحساب أو الصفحة" });
+      }
+
+      const normalizeUrl = (url: string) => {
+        let clean = url.trim().toLowerCase();
+        clean = clean.replace(/^(https?:\/\/)?(www\.)?/, "");
+        clean = clean.replace(/^@/, "");
+        clean = clean.replace(/\/+$/, "");
+        return clean;
+      };
+
+      const normalizedSearch = normalizeUrl(pageUrl);
+      if (!normalizedSearch) {
+        return res.status(400).json({ error: "الرجاء إدخال رابط الحساب أو الصفحة بشكل صحيح" });
+      }
+
+      // Fetch orders
+      const orders = await prisma.order.findMany({
+        orderBy: { createdAt: "desc" }
+      });
+
+      // Filter to find matching page URL
+      const matchedOrders = orders.filter(order => {
+        const normStored = normalizeUrl(order.pageUrl);
+        return normStored === normalizedSearch || 
+               normStored.includes(normalizedSearch) || 
+               normalizedSearch.includes(normStored);
+      });
+
+      if (matchedOrders.length === 0) {
+        return res.status(404).json({ error: "لم يتم العثور على أي طلبات مرتبطة برابط هذا الحساب أو الصفحة" });
+      }
+
+      // Return the most recent matching order
+      const latestOrder = matchedOrders[0];
+      res.json(latestOrder);
+    } catch (error) {
+      res.status(500).json({ error: "حدث خطأ أثناء تتبع الطلب" });
+    }
+  }
+);
+
 // Create Order (Public)
 app.post(
   "/api/orders",
@@ -311,6 +361,151 @@ app.post("/api/coupons/validate", async (req, res) => {
     res.status(500).json({ error: "فشل التحقق من كود الخصم" });
   }
 });
+
+// Daily Gift IP helper
+const getClientIp = (req: any) => {
+  const forwarded = req.headers["x-forwarded-for"];
+  if (forwarded) {
+    if (typeof forwarded === "string") {
+      return forwarded.split(",")[0].trim();
+    } else if (Array.isArray(forwarded)) {
+      return forwarded[0].trim();
+    }
+  }
+  return req.ip || req.socket.remoteAddress || "127.0.0.1";
+};
+
+// GET /api/daily-gift/status
+app.get("/api/daily-gift/status", async (req, res) => {
+  try {
+    const ip = getClientIp(req);
+    
+    // Fetch gift settings
+    const settingsList = await prisma.setting.findMany();
+    const settings = settingsList.reduce((acc: any, curr) => {
+      acc[curr.key] = curr.value;
+      return acc;
+    }, {});
+
+    const giftType = settings.daily_gift_type || "لايك";
+    const giftQty = parseInt(settings.daily_gift_qty || "50");
+    const giftPlatform = settings.daily_gift_platform || "Instagram";
+    const giftActive = settings.daily_gift_active !== "false";
+
+    const giftConfig = {
+      type: giftType,
+      qty: giftQty,
+      platform: giftPlatform,
+      active: giftActive
+    };
+
+    // Find latest claim by this IP in the last 24 hours
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const lastClaim = await prisma.giftClaim.findFirst({
+      where: {
+        ip: ip,
+        createdAt: {
+          gte: oneDayAgo
+        }
+      },
+      orderBy: {
+        createdAt: "desc"
+      }
+    });
+
+    if (lastClaim) {
+      const elapsed = Date.now() - lastClaim.createdAt.getTime();
+      const timeLeftMs = (24 * 60 * 60 * 1000) - elapsed;
+      const timeLeftSeconds = Math.max(0, Math.ceil(timeLeftMs / 1000));
+      return res.json({
+        canClaim: false,
+        timeLeftSeconds,
+        giftConfig,
+        lastClaim
+      });
+    }
+
+    res.json({
+      canClaim: true,
+      timeLeftSeconds: 0,
+      giftConfig
+    });
+  } catch (error) {
+    res.status(500).json({ error: "حدث خطأ أثناء فحص حالة الهدية اليومية" });
+  }
+});
+
+// POST /api/daily-gift/claim
+app.post("/api/daily-gift/claim", async (req, res) => {
+  try {
+    const ip = getClientIp(req);
+    const { targetAccount } = req.body;
+
+    if (!targetAccount || typeof targetAccount !== "string" || !targetAccount.trim()) {
+      return res.status(400).json({ error: "الرجاء إدخال رابط الحساب أو اسم المستخدم لتلقي الهدية" });
+    }
+
+    // Fetch gift settings
+    const settingsList = await prisma.setting.findMany();
+    const settings = settingsList.reduce((acc: any, curr) => {
+      acc[curr.key] = curr.value;
+      return acc;
+    }, {});
+
+    const giftActive = settings.daily_gift_active !== "false";
+    if (!giftActive) {
+      return res.status(400).json({ error: "الهدية اليومية المجانية غير مفعلة حالياً من قبل الإدارة" });
+    }
+
+    const giftType = settings.daily_gift_type || "لايك";
+    const giftQty = parseInt(settings.daily_gift_qty || "50");
+    const giftPlatform = settings.daily_gift_platform || "Instagram";
+
+    // Double check 24h claiming window
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const lastClaim = await prisma.giftClaim.findFirst({
+      where: {
+        ip: ip,
+        createdAt: {
+          gte: oneDayAgo
+        }
+      },
+      orderBy: {
+        createdAt: "desc"
+      }
+    });
+
+    if (lastClaim) {
+      const elapsed = Date.now() - lastClaim.createdAt.getTime();
+      const timeLeftMs = (24 * 60 * 60 * 1000) - elapsed;
+      const timeLeftSeconds = Math.max(0, Math.ceil(timeLeftMs / 1000));
+      return res.status(400).json({
+        error: "عذراً، لقد قمت باستلام هديتك اليومية بالفعل من هذا الجهاز",
+        timeLeftSeconds
+      });
+    }
+
+    // Create a new claim
+    const claim = await prisma.giftClaim.create({
+      data: {
+        ip: ip,
+        targetAccount: targetAccount.trim(),
+        giftType: giftType,
+        giftQty: giftQty,
+        platform: giftPlatform
+      }
+    });
+
+    res.json({
+      success: true,
+      message: "تم طلب الهدية المجانية بنجاح! جاري تنفيذ الهدية لحسابك خلال دقائق معدودة.",
+      claim
+    });
+  } catch (error) {
+    res.status(500).json({ error: "حدث خطأ أثناء طلب الهدية اليومية" });
+  }
+});
+
 
 // Fetch Customer Reviews
 app.get("/api/reviews", async (req, res) => {
@@ -725,6 +920,10 @@ async function initializeApp() {
     { key: "etisalat_cash_number", value: "01124656914" },
     { key: "we_pay_number", value: "01124656914" },
     { key: "instapay_number", value: "01558676497" },
+    { key: "daily_gift_type", value: "لايك" },
+    { key: "daily_gift_qty", value: "50" },
+    { key: "daily_gift_platform", value: "Instagram" },
+    { key: "daily_gift_active", value: "true" },
   ];
 
   for (const setting of defaultSettings) {

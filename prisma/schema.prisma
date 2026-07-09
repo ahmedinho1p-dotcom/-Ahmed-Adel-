@@ -65,3 +65,14 @@ model Review {
   isApproved   Boolean  @default(true)
   createdAt    DateTime @default(now())
 }
+
+model GiftClaim {
+  id            String   @id @default(uuid())
+  ip            String
+  targetAccount String
+  giftType      String
+  giftQty       Int
+  platform      String
+  createdAt     DateTime @default(now())
+}
+

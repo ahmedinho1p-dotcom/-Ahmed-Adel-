@@ -284,7 +284,7 @@ export default function DailyGiftModal({ isOpen, onClose, darkMode }: DailyGiftM
                             <input
                               type="text"
                               required
-                              placeholder="مثال: https://instagram.com/username أو @username"
+                              placeholder={`مثال: رابط حسابك أو اسم مستخدم ${status.giftConfig.platform}`}
                               value={targetAccount}
                               onChange={(e) => setTargetAccount(e.target.value)}
                               className={`w-full text-xs p-4 pr-11 rounded-2xl border focus:outline-none focus:ring-2 focus:ring-pink-500/45 text-right ${

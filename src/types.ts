@@ -1,7 +1,7 @@
 export interface Package {
   id: string;
   name: string;
-  platform: 'Facebook' | 'Instagram' | 'YouTube' | 'Google Reviews';
+  platform: 'Facebook' | 'Instagram' | 'YouTube' | 'Google Reviews' | 'TikTok';
   followersCount: string;
   price: number;
   deliveryTime: string;
@@ -85,6 +85,8 @@ export interface DashboardStats {
     Instagram: number;
     YouTube: number;
     "Google Reviews": number;
+    TikTok?: number;
+    [key: string]: number | undefined;
   };
   totalPackages: number;
 }

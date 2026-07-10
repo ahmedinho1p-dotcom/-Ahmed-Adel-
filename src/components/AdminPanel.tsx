@@ -1092,6 +1092,7 @@ export default function AdminPanel({ darkMode, currency, onSettingsUpdated }: Ad
                               <option value="Instagram">Instagram</option>
                               <option value="Facebook">Facebook</option>
                               <option value="YouTube">YouTube</option>
+                              <option value="TikTok">TikTok</option>
                               <option value="Google Reviews">Google Reviews</option>
                             </select>
                           </div>
@@ -1800,6 +1801,7 @@ export default function AdminPanel({ darkMode, currency, onSettingsUpdated }: Ad
                               <option value="لايك">لايكات / تفاعلات (Likes)</option>
                               <option value="متابع">متابعين (Followers)</option>
                               <option value="مشاهدة">مشاهدات (Views)</option>
+                              <option value="لايك على تعليق">لايكات على تعليق (Comment Likes)</option>
                             </select>
                           </div>
 

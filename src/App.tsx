@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence, useScroll, useSpring, useTransform } from "motion/react";
 import { 
   Sparkles, Search, MessageCircle, Phone, ArrowLeft, Facebook, Instagram, 
   Youtube, Star, CheckCircle, ShieldAlert, Award, ChevronLeft, ChevronRight, Check,
-  Clock, CreditCard, RefreshCw, AlertCircle, Gift
+  Clock, CreditCard, RefreshCw, AlertCircle, Gift, Music
 } from "lucide-react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -15,6 +15,7 @@ import CompanyInfo from "./components/CompanyInfo";
 import AdminPanel from "./components/AdminPanel";
 import SplashScreen from "./components/SplashScreen";
 import DailyGiftModal from "./components/DailyGiftModal";
+import ScrollReveal from "./components/ScrollReveal";
 import { Package, Review, StoreSettings } from "./types";
 
 const getPackageStyle = (packageName: string, darkMode: boolean) => {
@@ -94,6 +95,17 @@ const getPackageStyle = (packageName: string, darkMode: boolean) => {
 export default function App() {
   const [showSplash, setShowSplash] = useState<boolean>(true);
 
+  // Scroll tracking for luxury progress indicator and parallax orbs
+  const { scrollY, scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, {
+    stiffness: 100,
+    damping: 30,
+    restDelta: 0.001
+  });
+
+  const orb1Y = useTransform(scrollY, [0, 1000], [0, -120]);
+  const orb2Y = useTransform(scrollY, [0, 1000], [0, 120]);
+
   const handleSplashComplete = () => {
     setShowSplash(false);
   };
@@ -163,8 +175,8 @@ export default function App() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [settings, setSettings] = useState<StoreSettings>({});
   
-  // Platform filtering (Facebook, Instagram, YouTube, Google Reviews)
-  const [selectedPlatform, setSelectedPlatform] = useState<'Facebook' | 'Instagram' | 'YouTube' | 'Google Reviews'>('Instagram');
+  // Platform filtering (Facebook, Instagram, YouTube, Google Reviews, TikTok)
+  const [selectedPlatform, setSelectedPlatform] = useState<'Facebook' | 'Instagram' | 'YouTube' | 'Google Reviews' | 'TikTok'>('Instagram');
   const [searchQuery, setSearchQuery] = useState("");
 
   // Tracking state
@@ -333,6 +345,34 @@ export default function App() {
     return `${Math.round(val * 100) / 100} ${symbol}`;
   };
 
+  // Converted service label based on package name or description to fit all services dynamically
+  const getServiceLabel = (pack: Package) => {
+    const name = pack.name.toLowerCase();
+    const desc = pack.description.toLowerCase();
+    const platform = pack.platform;
+
+    if (platform === "Google Reviews" || name.includes("تقييم") || desc.includes("تقييم")) {
+      return "تقييم Reviews";
+    }
+    if (
+      name.includes("لايك على تعليق") || 
+      desc.includes("لايك على تعليق") || 
+      name.includes("لايكات تعليق") || 
+      name.includes("لايكات على تعليق") || 
+      name.includes("تعليق") || 
+      name.includes("comment like")
+    ) {
+      return "لايك على تعليق Comment Likes";
+    }
+    if (name.includes("لايك") || desc.includes("لايك") || name.includes("إعجاب") || name.includes("like")) {
+      return "لايك Likes";
+    }
+    if (name.includes("مشاهد") || desc.includes("مشاهد") || name.includes("view")) {
+      return "مشاهدة Views";
+    }
+    return "متابع Followers";
+  };
+
   // Render Platform Icon with dynamic pulsating and hover rotation animations
   const renderPlatformIcon = (platform: string) => {
     const iconClass = "w-5 h-5 transition-transform duration-300";
@@ -340,6 +380,7 @@ export default function App() {
     if (platform === "Instagram") icon = <Instagram className={`${iconClass} text-pink-500`} />;
     if (platform === "Facebook") icon = <Facebook className={`${iconClass} text-blue-500`} />;
     if (platform === "YouTube") icon = <Youtube className={`${iconClass} text-red-500`} />;
+    if (platform === "TikTok") icon = <Music className={`${iconClass} text-[#00f2fe]`} />;
 
     return (
       <motion.div
@@ -363,6 +404,12 @@ export default function App() {
     <div className={`min-h-screen flex flex-col font-sans transition-colors duration-300 antialiased ${
       darkMode ? "bg-[#050505] text-white" : "bg-neutral-50 text-neutral-900"
     }`}>
+      
+      {/* Premium scroll progress bar - RTL aligned */}
+      <motion.div
+        className="fixed top-0 left-0 right-0 h-[3.5px] bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 z-[9999] origin-right pointer-events-none"
+        style={{ scaleX }}
+      />
       
       {/* Global Navigation Header - ONLY render if not in admin view */}
       {currentView !== 'admin' && (
@@ -395,48 +442,56 @@ export default function App() {
                   <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4 relative z-10">
                     
                     {/* Glowing Accent Pill */}
-                    <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-white bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-1.5 rounded-full shadow-lg shadow-pink-500/10 animate-bounce-slow">
-                      <Sparkles className="w-3.5 h-3.5 animate-spin" />
-                      <span>متجر معتمد وموثوق 100% لتزويد خدمات التواصل</span>
-                    </span>
-
-                    <h1 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tight leading-[1.25] text-transparent bg-clip-text bg-gradient-to-r from-white via-neutral-100 to-neutral-400">
-                      ضخم حضورك الرقمي مع <br className="hidden sm:inline" />
-                      <span className="bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 bg-clip-text text-transparent">
-                        زودها ZWDHA
+                    <ScrollReveal delay={0.05} direction="down" duration={0.8} distance={15} className="inline-block">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-white bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-1.5 rounded-full shadow-lg shadow-pink-500/10 animate-bounce-slow">
+                        <Sparkles className="w-3.5 h-3.5 animate-spin" />
+                        <span>متجر معتمد وموثوق 100% لتزويد خدمات التواصل</span>
                       </span>
-                    </h1>
+                    </ScrollReveal>
 
-                    <p className="text-xs sm:text-sm text-neutral-400 max-w-xl mx-auto leading-relaxed">
-                      الوجهة المثالية في مصر والوطن العربي لتزويد المتابعين، اللايكات، المشتركين والتقييمات بجودة لا مثيل لها وبثقة تامة مع حماية خصوصية حسابك وضمان تعويض مجاني مدى الحياة.
-                    </p>
+                    <ScrollReveal delay={0.15} direction="up" duration={0.9} blur={true} scale={true}>
+                      <h1 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tight leading-[1.25] text-transparent bg-clip-text bg-gradient-to-r from-white via-neutral-100 to-neutral-400">
+                        ضخم حضورك الرقمي مع <br className="hidden sm:inline" />
+                        <span className="bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 bg-clip-text text-transparent">
+                          زودها ZWDHA
+                        </span>
+                      </h1>
+                    </ScrollReveal>
+
+                    <ScrollReveal delay={0.25} direction="up" duration={0.9} blur={true} scale={true}>
+                      <p className="text-xs sm:text-sm text-neutral-400 max-w-xl mx-auto leading-relaxed">
+                        الوجهة المثالية في مصر والوطن العربي لتزويد المتابعين، اللايكات، المشتركين والتقييمات بجودة لا مثيل لها وبثقة تامة مع حماية خصوصية حسابك وضمان تعويض مجاني مدى الحياة.
+                      </p>
+                    </ScrollReveal>
 
                     {/* CTA buttons */}
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-                      <motion.a
-                        id="hero-cta-browse"
-                        href="#store-section"
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="w-full sm:w-auto px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 hover:opacity-95 text-white font-extrabold text-xs shadow-xl shadow-pink-500/15 text-center transition-all cursor-pointer"
-                      >
-                        تصفح باقات الخدمات المتاحة
-                      </motion.a>
-                      <motion.button
-                        id="hero-cta-info"
-                        onClick={() => setView('info')}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className={`w-full sm:w-auto px-6 py-3 rounded-xl border text-xs font-bold text-center transition-all cursor-pointer ${
-                          darkMode ? "border-neutral-800 hover:bg-neutral-800 text-white" : "border-neutral-200 hover:bg-neutral-100 text-neutral-900"
-                        }`}
-                      >
-                        تعرّف على سياسة الضمان لدينا
-                      </motion.button>
-                    </div>
+                    <ScrollReveal delay={0.35} direction="up" duration={0.9} blur={true} scale={true}>
+                      <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+                        <motion.a
+                          id="hero-cta-browse"
+                          href="#store-section"
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          className="w-full sm:w-auto px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 hover:opacity-95 text-white font-extrabold text-xs shadow-xl shadow-pink-500/15 text-center transition-all cursor-pointer"
+                        >
+                          تصفح باقات الخدمات المتاحة
+                        </motion.a>
+                        <motion.button
+                          id="hero-cta-info"
+                          onClick={() => setView('info')}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          className={`w-full sm:w-auto px-6 py-3 rounded-xl border text-xs font-bold text-center transition-all cursor-pointer ${
+                            darkMode ? "border-neutral-800 hover:bg-neutral-800 text-white" : "border-neutral-200 hover:bg-neutral-100 text-neutral-900"
+                          }`}
+                        >
+                          تعرّف على سياسة الضمان لدينا
+                        </motion.button>
+                      </div>
+                    </ScrollReveal>
 
                     {/* Daily Free Gift Button */}
-                    <div className="mt-4 flex justify-center">
+                    <ScrollReveal delay={0.45} direction="up" duration={0.9} blur={true} scale={true} className="mt-4 flex justify-center">
                       <motion.button
                         id="hero-cta-daily-gift"
                         onClick={() => setIsGiftModalOpen(true)}
@@ -447,28 +502,35 @@ export default function App() {
                         <Gift className="w-4 h-4 text-white animate-bounce" />
                         <span>🎁 هدايا يومية مجانية (لايكات ومتابعين)</span>
                       </motion.button>
-                    </div>
+                    </ScrollReveal>
 
                   </div>
 
-                  {/* Aesthetic Background Orbs */}
-                  <div className="absolute top-1/4 left-1/4 w-72 h-72 rounded-full bg-purple-600/5 blur-3xl pointer-events-none" />
-                  <div className="absolute bottom-1/4 right-1/4 w-72 h-72 rounded-full bg-pink-600/5 blur-3xl pointer-events-none" />
+                  {/* Aesthetic Background Orbs with luxury parallax */}
+                  <motion.div 
+                    style={{ y: orb1Y }}
+                    className="absolute top-1/4 left-1/4 w-72 h-72 rounded-full bg-purple-600/5 blur-3xl pointer-events-none" 
+                  />
+                  <motion.div 
+                    style={{ y: orb2Y }}
+                    className="absolute bottom-1/4 right-1/4 w-72 h-72 rounded-full bg-pink-600/5 blur-3xl pointer-events-none" 
+                  />
                 </section>
 
                 {/* SMM Store Services Section */}
                 <section id="store-section" className="py-8 sm:py-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                   
                   {/* Category Filter and Search */}
-                  <div className="flex flex-col lg:flex-row items-center justify-between gap-6 mb-6 border-b border-neutral-800/15 pb-4">
+                  <ScrollReveal delay={0.1} direction="up" distance={20} className="flex flex-col lg:flex-row items-center justify-between gap-6 mb-6 border-b border-neutral-800/15 pb-4">
                     
-                    {/* 4 Separate Service Categories tabs (Facebook, Instagram, YouTube, Google Reviews) */}
+                    {/* 5 Separate Service Categories tabs (Facebook, Instagram, YouTube, TikTok, Google Reviews) */}
                     <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
                       {([
                         { id: 'Instagram', label: 'إنستقرام Instagram' },
                         { id: 'Facebook', label: 'فيسبوك Facebook' },
                         { id: 'YouTube', label: 'يوتيوب YouTube' },
-                        { id: 'Google Reviews', label: 'تقييمات جوجلReviews' }
+                        { id: 'TikTok', label: 'تيك توك TikTok' },
+                        { id: 'Google Reviews', label: 'تقييمات جوجل Google' }
                       ] as const).map((platform) => (
                         <motion.button
                           key={platform.id}
@@ -526,7 +588,7 @@ export default function App() {
                       </div>
                     </div>
 
-                  </div>
+                  </ScrollReveal>
 
                   {/* Tracking Results or Errors panel */}
                   <AnimatePresence>
@@ -659,114 +721,117 @@ export default function App() {
                           لا توجد أي باقات متاحة متوافقة مع هذا البحث حالياً.
                         </motion.div>
                       ) : (
-                        filteredPackages.map((pack) => {
+                        filteredPackages.map((pack, index) => {
                           const style = getPackageStyle(pack.name, darkMode);
                           return (
-                            <motion.div
+                            <ScrollReveal
                               key={pack.id}
-                              initial={{ opacity: 0, y: 25, scale: 0.97 }}
-                              animate={{ opacity: 1, y: 0, scale: 1 }}
-                              exit={{ opacity: 0, y: -20, scale: 0.97 }}
-                              transition={{ duration: 0.35, ease: "easeOut" }}
-                              whileHover={{ y: -8, scale: 1.015 }}
-                              whileTap={{ scale: 0.985 }}
-                              className={`rounded-2xl border p-6 flex flex-col justify-between transition-all duration-300 relative group overflow-hidden ${style.cardClass}`}
+                              delay={(index % 3) * 0.08}
+                              direction="up"
+                              distance={30}
+                              className="h-full"
                             >
-                              {/* Inner body wrapper to allow custom layouts */}
-                              <div className="w-full h-full flex flex-col justify-between relative z-10">
-                                
-                                <div className="space-y-4">
-                                  {/* Header (Badge + Platform) */}
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-[10px] font-black text-pink-500 bg-pink-500/10 px-2.5 py-1 rounded-full flex items-center gap-1 font-mono">
-                                      {renderPlatformIcon(pack.platform)}
-                                      {pack.platform}
-                                    </span>
-                                    <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${style.badgeClass}`}>
-                                      {style.badgeText}
-                                    </span>
-                                  </div>
-
-                                  {/* Package title */}
-                                  <h3 className={`text-base font-black leading-snug ${darkMode ? "text-white" : "text-neutral-900"}`}>{pack.name}</h3>
+                              <motion.div
+                                whileHover={{ y: -8, scale: 1.015 }}
+                                whileTap={{ scale: 0.985 }}
+                                className={`rounded-2xl border p-6 flex flex-col justify-between transition-all duration-300 relative group overflow-hidden h-full ${style.cardClass}`}
+                              >
+                                {/* Inner body wrapper to allow custom layouts */}
+                                <div className="w-full h-full flex flex-col justify-between relative z-10">
                                   
-                                  {/* Followers amount badge with 'متابع Followers' wording */}
-                                  <div className="flex items-baseline gap-2">
-                                    <span className={`text-3xl font-black font-mono tracking-tight ${style.accentText}`}>
-                                      {pack.followersCount}
-                                    </span>
-                                    <span className="text-xs font-bold text-neutral-450">متابع Followers</span>
-                                  </div>
-
-                                  <p className="text-xs text-neutral-450 leading-relaxed min-h-[48px]">{pack.description}</p>
-                                  
-                                  {/* Delivery and features */}
-                                  <div className="space-y-2 border-t border-neutral-800/20 pt-4 text-xs text-neutral-450">
-                                    <div className="flex justify-between">
-                                      <span>⏱️ وقت البدء والتسليم:</span>
-                                      <span className="font-bold text-neutral-300">{pack.deliveryTime}</span>
-                                    </div>
-                                    
-                                    {/* Beautiful Interactive Gift Pill Button */}
-                                    {pack.gift && (
-                                      <motion.div
-                                        whileHover={{ scale: 1.02 }}
-                                        whileTap={{ scale: 0.98 }}
-                                        className="mt-3.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between gap-2 shadow-lg shadow-amber-500/5 select-none"
-                                      >
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-sm">🎁</span>
-                                          <span className="text-xs font-bold text-amber-500 dark:text-amber-400">هدية إضافية:</span>
-                                        </div>
-                                        <span className="text-xs font-black bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 dark:from-amber-400 dark:via-orange-400 dark:to-amber-300 bg-clip-text text-transparent flex items-center gap-1">
-                                          {pack.gift === "Like" ? "زيادة لايكات Like ❤️" :
-                                           pack.gift === "Follow" ? "زيادة متابعين Follow 👤" :
-                                           pack.gift === "Both" ? "لايكات ومتابعين Like & Follow ✨" :
-                                           pack.gift}
-                                        </span>
-                                      </motion.div>
-                                    )}
-
-                                    {/* Discount percentage tag */}
-                                    {pack.discount && (
-                                      <div className="flex justify-between text-green-500 font-bold">
-                                        <span>🔥 خصم فوري:</span>
-                                        <span>وفر {pack.discount}% خصم اليوم!</span>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-
-                                {/* Price block & button */}
-                                <div className="mt-6 pt-4 border-t border-neutral-800/15 flex items-center justify-between gap-4">
-                                  <div className="flex flex-col">
-                                    {pack.discount && (
-                                      <span className="text-[10px] text-neutral-500 line-through font-mono">
-                                        {getConvertedPriceText(pack.price)}
+                                  <div className="space-y-4">
+                                    {/* Header (Badge + Platform) */}
+                                    <div className="flex justify-between items-center">
+                                      <span className="text-[10px] font-black text-pink-500 bg-pink-500/10 px-2.5 py-1 rounded-full flex items-center gap-1 font-mono">
+                                        {renderPlatformIcon(pack.platform)}
+                                        {pack.platform}
                                       </span>
-                                    )}
-                                    <span className="text-lg font-black font-mono text-pink-500">
-                                      {getConvertedPriceText(pack.price, pack.discount)}
-                                    </span>
+                                      <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${style.badgeClass}`}>
+                                        {style.badgeText}
+                                      </span>
+                                    </div>
+
+                                    {/* Package title */}
+                                    <h3 className={`text-base font-black leading-snug ${darkMode ? "text-white" : "text-neutral-900"}`}>{pack.name}</h3>
+                                    
+                                    {/* Followers amount badge with dynamic service wording */}
+                                    <div className="flex items-baseline gap-2">
+                                      <span className={`text-3xl font-black font-mono tracking-tight ${style.accentText}`}>
+                                        {pack.followersCount}
+                                      </span>
+                                      <span className="text-xs font-bold text-neutral-450">{getServiceLabel(pack)}</span>
+                                    </div>
+
+                                    <p className="text-xs text-neutral-450 leading-relaxed min-h-[48px]">{pack.description}</p>
+                                    
+                                    {/* Delivery and features */}
+                                    <div className="space-y-2 border-t border-neutral-800/20 pt-4 text-xs text-neutral-450">
+                                      <div className="flex justify-between">
+                                        <span>⏱️ وقت البدء والتسليم:</span>
+                                        <span className="font-bold text-neutral-300">{pack.deliveryTime}</span>
+                                      </div>
+                                      
+                                      {/* Beautiful Interactive Gift Pill Button */}
+                                      {pack.gift && (
+                                        <motion.div
+                                          whileHover={{ scale: 1.02 }}
+                                          whileTap={{ scale: 0.98 }}
+                                          className="mt-3.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between gap-2 shadow-lg shadow-amber-500/5 select-none"
+                                        >
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-sm">🎁</span>
+                                            <span className="text-xs font-bold text-amber-500 dark:text-amber-400">هدية إضافية:</span>
+                                          </div>
+                                          <span className="text-xs font-black bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 dark:from-amber-400 dark:via-orange-400 dark:to-amber-300 bg-clip-text text-transparent flex items-center gap-1">
+                                            {pack.gift === "Like" ? "زيادة لايكات Like ❤️" :
+                                             pack.gift === "Follow" ? "زيادة متابعين Follow 👤" :
+                                             pack.gift === "Both" ? "لايكات ومتابعين Like & Follow ✨" :
+                                             pack.gift}
+                                          </span>
+                                        </motion.div>
+                                      )}
+
+                                      {/* Discount percentage tag */}
+                                      {pack.discount && (
+                                        <div className="flex justify-between text-green-500 font-bold">
+                                          <span>🔥 خصم فوري:</span>
+                                          <span>وفر {pack.discount}% خصم اليوم!</span>
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
 
-                                  <motion.button
-                                    id={`pkg-order-btn-${pack.id}`}
-                                    onClick={() => setSelectedPackage(pack)}
-                                    whileHover={{ scale: 1.06, filter: "hue-rotate(8deg) brightness(1.15) contrast(1.05)" }}
-                                    whileTap={{ scale: 0.93, filter: "brightness(0.95)" }}
-                                    transition={{ type: "spring", stiffness: 450, damping: 15 }}
-                                    className={`px-5 py-2.5 rounded-xl font-extrabold text-xs transition-all duration-300 cursor-pointer touch-manipulation active:scale-95 ${style.buttonClass}`}
-                                  >
-                                    اطلب الآن 🚀
-                                  </motion.button>
+                                  {/* Price block & button */}
+                                  <div className="mt-6 pt-4 border-t border-neutral-800/15 flex items-center justify-between gap-4">
+                                    <div className="flex flex-col">
+                                      {pack.discount && (
+                                        <span className="text-[10px] text-neutral-500 line-through font-mono">
+                                          {getConvertedPriceText(pack.price)}
+                                        </span>
+                                      )}
+                                      <span className="text-lg font-black font-mono text-pink-500">
+                                        {getConvertedPriceText(pack.price, pack.discount)}
+                                      </span>
+                                    </div>
+
+                                    <motion.button
+                                      id={`pkg-order-btn-${pack.id}`}
+                                      onClick={() => setSelectedPackage(pack)}
+                                      whileHover={{ scale: 1.06, filter: "hue-rotate(8deg) brightness(1.15) contrast(1.05)" }}
+                                      whileTap={{ scale: 0.93, filter: "brightness(0.95)" }}
+                                      transition={{ type: "spring", stiffness: 450, damping: 15 }}
+                                      className={`px-5 py-2.5 rounded-xl font-extrabold text-xs transition-all duration-300 cursor-pointer touch-manipulation active:scale-95 ${style.buttonClass}`}
+                                    >
+                                      اطلب الآن 🚀
+                                    </motion.button>
+                                  </div>
+
                                 </div>
 
-                              </div>
-
-                              {/* Glow/reflect premium backgrounds */}
-                              <div className={`${style.glowBg}`} />
-                            </motion.div>
+                                {/* Glow/reflect premium backgrounds */}
+                                <div className={`${style.glowBg}`} />
+                              </motion.div>
+                            </ScrollReveal>
                           );
                         })
                       )}

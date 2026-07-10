@@ -5,14 +5,52 @@ import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
+import cors from "cors";
+import helmet from "helmet";
+
+// Construct DATABASE_URL dynamically for runtime application-level PostgreSQL connection
+if (!process.env.DATABASE_URL) {
+  const dbUser = process.env.SQL_USER;
+  const dbPassword = process.env.SQL_PASSWORD;
+  const dbName = process.env.SQL_DB_NAME;
+  const dbHost = process.env.SQL_HOST;
+
+  if (dbUser && dbHost && dbName) {
+    if (dbHost.startsWith("/")) {
+      process.env.DATABASE_URL = `postgresql://${dbUser}:${encodeURIComponent(dbPassword || "")}@localhost/${dbName}?host=${encodeURIComponent(dbHost)}`;
+    } else {
+      process.env.DATABASE_URL = `postgresql://${dbUser}:${encodeURIComponent(dbPassword || "")}@${dbHost}/${dbName}`;
+    }
+    console.log("Dynamically constructed DATABASE_URL for application user connection.");
+  }
+}
 
 const prisma = new PrismaClient();
 const app = express();
 const PORT = 3000;
 const JWT_SECRET = process.env.JWT_SECRET || "zwdha-super-secret-key-123456";
 
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+}));
+app.use(cors());
+
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ limit: "15mb", extended: true }));
+
+// Daily Gift IP helper
+const getClientIp = (req: any): string => {
+  const forwarded = req.headers["x-forwarded-for"];
+  if (forwarded) {
+    if (typeof forwarded === "string") {
+      return forwarded.split(",")[0].trim();
+    } else if (Array.isArray(forwarded)) {
+      return forwarded[0].trim();
+    }
+  }
+  return req.ip || req.socket.remoteAddress || "127.0.0.1";
+};
 
 // In-memory simple rate limiting for public endpoints (order creation, coupon checks, reviews)
 const rateLimits = new Map<string, { count: number; resetAt: number }>();
@@ -288,6 +326,24 @@ app.post(
       const currencySetting = await prisma.setting.findUnique({ where: { key: "currency_default" } });
       const currency = currencySetting ? currencySetting.value : "EGP";
 
+      // Find or create Customer
+      let customer = await prisma.customer.findUnique({ where: { phone: cleanPhone } });
+      if (!customer) {
+        customer = await prisma.customer.create({
+          data: {
+            phone: cleanPhone,
+            name: cleanName,
+          },
+        });
+      } else {
+        if (customer.name !== cleanName) {
+          await prisma.customer.update({
+            where: { phone: cleanPhone },
+            data: { name: cleanName },
+          });
+        }
+      }
+
       // Create Order
       const newOrder = await prisma.order.create({
         data: {
@@ -305,6 +361,26 @@ app.post(
           paymentAmount: paymentAmount ? parseFloat(paymentAmount) : null,
           paymentScreenshot: paymentScreenshot || null,
           paymentStatus: paymentMethod ? "في انتظار المراجعة" : null,
+        },
+      });
+
+      // Create Initial Order History
+      await prisma.orderHistory.create({
+        data: {
+          orderId: newOrder.id,
+          status: "New",
+          notes: paymentMethod 
+            ? `تم تسجيل الطلب وإرفاق إثبات الدفع عن طريق (${paymentMethod}) وهو بانتظار المراجعة من قبل الإدارة.`
+            : "تم تسجيل الطلب بنجاح وهو بانتظار التواصل والتنفيذ.",
+        },
+      });
+
+      // Create Security Activity Log
+      await prisma.activityLog.create({
+        data: {
+          action: "ORDER_CREATE",
+          details: `تم إنشاء طلب جديد برقم ${newOrder.id} للعميل ${cleanName} برقم هاتف ${cleanPhone}`,
+          ip: getClientIp(req),
         },
       });
 
@@ -362,18 +438,7 @@ app.post("/api/coupons/validate", async (req, res) => {
   }
 });
 
-// Daily Gift IP helper
-const getClientIp = (req: any) => {
-  const forwarded = req.headers["x-forwarded-for"];
-  if (forwarded) {
-    if (typeof forwarded === "string") {
-      return forwarded.split(",")[0].trim();
-    } else if (Array.isArray(forwarded)) {
-      return forwarded[0].trim();
-    }
-  }
-  return req.ip || req.socket.remoteAddress || "127.0.0.1";
-};
+// Daily Gift IP helper is now hoisted to the top
 
 // GET /api/daily-gift/status
 app.get("/api/daily-gift/status", async (req, res) => {
@@ -736,9 +801,14 @@ app.post("/api/packages/reorder", authenticateAdmin, async (req, res) => {
 });
 
 // Admin Orders API
-app.get("/api/orders", authenticateAdmin, async (req, res) => {
+app.get("/api/orders", authenticateAdmin, async (req: any, res) => {
   try {
     const orders = await prisma.order.findMany({
+      include: {
+        history: {
+          orderBy: { createdAt: "desc" }
+        }
+      },
       orderBy: { createdAt: "desc" },
     });
     res.json(orders);
@@ -747,31 +817,78 @@ app.get("/api/orders", authenticateAdmin, async (req, res) => {
   }
 });
 
-app.patch("/api/orders/:id/status", authenticateAdmin, async (req, res) => {
+app.patch("/api/orders/:id/status", authenticateAdmin, async (req: any, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body; // New | Contacted | Completed | Cancelled
+    const { status, notes } = req.body; // New | Contacted | Completed | Cancelled
     const updated = await prisma.order.update({
       where: { id },
       data: { status },
     });
+
+    // Save order history log
+    await prisma.orderHistory.create({
+      data: {
+        orderId: id,
+        status,
+        notes: notes || `تم تعديل حالة الطلب إلى: ${status}`,
+      },
+    });
+
+    // Save activity log
+    await prisma.activityLog.create({
+      data: {
+        action: "ORDER_STATUS_UPDATE",
+        details: `تم تعديل حالة الطلب ${id} إلى ${status}`,
+        adminUser: req.adminUsername,
+        ip: getClientIp(req),
+      },
+    });
+
     res.json(updated);
   } catch (error) {
     res.status(500).json({ error: "فشل تحديث حالة الطلب" });
   }
 });
 
-app.patch("/api/orders/:id/payment", authenticateAdmin, async (req, res) => {
+app.patch("/api/orders/:id/payment", authenticateAdmin, async (req: any, res) => {
   try {
     const { id } = req.params;
     const { paymentStatus, internalNotes } = req.body;
+    
+    const dataToUpdate: any = { 
+      paymentStatus,
+      internalNotes,
+    };
+
+    if (paymentStatus === "مدفوع" || paymentStatus === "مقبول" || paymentStatus === "تم قبول الدفع" || paymentStatus === "مرفوض" || paymentStatus === "تم رفض الدفع") {
+      dataToUpdate.reviewedAt = new Date();
+    }
+
     const updated = await prisma.order.update({
       where: { id },
-      data: { 
-        paymentStatus,
-        internalNotes
+      data: dataToUpdate,
+    });
+
+    // Save order history log
+    await prisma.orderHistory.create({
+      data: {
+        orderId: id,
+        status: updated.status,
+        notes: `مراجعة الدفع: حالة الدفع الجديدة هي (${paymentStatus || "غير محدد"}) - ملاحظات الإدارة: ${internalNotes || "لا يوجد"}`,
       },
     });
+
+    // Save activity log
+    await prisma.activityLog.create({
+      data: {
+        action: "PAYMENT_REVIEW",
+        details: `تمت مراجعة دفع الطلب ${id} وتعيين الحالة إلى ${paymentStatus}`,
+        adminUser: req.adminUsername,
+        ip: getClientIp(req),
+      },
+    });
+
     res.json(updated);
   } catch (error) {
     res.status(500).json({ error: "فشل تحديث بيانات الدفع للطلب" });
@@ -790,9 +907,9 @@ app.get("/api/coupons", authenticateAdmin, async (req, res) => {
 
 app.post("/api/coupons", authenticateAdmin, async (req, res) => {
   try {
-    const { code, discountPercent, active } = req.body;
-    if (!code || !discountPercent) {
-      return res.status(400).json({ error: "الكود ونسبة الخصم مطلوبة" });
+    const { code, discountPercent, discountType, discountValue, expiresAt, minPurchase, maxUses, active } = req.body;
+    if (!code) {
+      return res.status(400).json({ error: "كود الخصم مطلوب" });
     }
 
     const cleanCode = code.toUpperCase().trim();
@@ -801,10 +918,19 @@ app.post("/api/coupons", authenticateAdmin, async (req, res) => {
       return res.status(400).json({ error: "هذا الكود متواجد بالفعل" });
     }
 
+    // Default percent and value mapping for backward/forward compatibility
+    const value = discountValue !== undefined ? parseFloat(discountValue) : (discountPercent !== undefined ? parseFloat(discountPercent) : 0);
+    const legacyPercent = discountType === "FIXED" ? 0 : value;
+
     const newCoupon = await prisma.coupon.create({
       data: {
         code: cleanCode,
-        discountPercent: parseFloat(discountPercent) || 0,
+        discountPercent: legacyPercent,
+        discountType: discountType || "PERCENT",
+        discountValue: value,
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+        minPurchase: minPurchase ? parseFloat(minPurchase) : null,
+        maxUses: maxUses ? parseInt(maxUses) : null,
         active: active !== undefined ? !!active : true,
       },
     });
@@ -853,32 +979,220 @@ app.post("/api/settings", authenticateAdmin, async (req, res) => {
 });
 
 // Admin Dashboard Stats endpoint
-app.get("/api/stats", authenticateAdmin, async (req, res) => {
+app.get("/api/stats", authenticateAdmin, async (req: any, res) => {
   try {
-    const allOrders = await prisma.order.findMany();
+    const allOrders = await prisma.order.findMany({
+      orderBy: { createdAt: "desc" },
+    });
+    
+    const customersCount = await prisma.customer.count();
     const allPackages = await prisma.package.findMany();
 
-    const stats = {
-      totalOrders: allOrders.length,
-      statusNew: allOrders.filter((o) => o.status === "New").length,
-      statusContacted: allOrders.filter((o) => o.status === "Contacted").length,
-      statusCompleted: allOrders.filter((o) => o.status === "Completed").length,
-      statusCancelled: allOrders.filter((o) => o.status === "Cancelled").length,
-      totalRevenue: allOrders.filter((o) => o.status === "Completed").reduce((sum, o) => sum + o.price, 0),
-      // Orders split by platform
-      platforms: {
-        Facebook: allOrders.filter((o) => o.platform === "Facebook").length,
-        Instagram: allOrders.filter((o) => o.platform === "Instagram").length,
-        YouTube: allOrders.filter((o) => o.platform === "YouTube").length,
-        "Google Reviews": allOrders.filter((o) => o.platform === "Google Reviews").length,
-      },
-      // Packages count
-      totalPackages: allPackages.length,
-    };
+    // Grouping orders by status
+    const statusCounts = allOrders.reduce((acc: any, curr) => {
+      acc[curr.status] = (acc[curr.status] || 0) + 1;
+      return acc;
+    }, {});
 
-    res.json(stats);
+    // Total revenue from completed orders (mektamel or completed)
+    const completedStatuses = ["Completed", "مكتمل", "تم قبول الدفع"];
+    const totalRevenue = allOrders
+      .filter((o) => completedStatuses.includes(o.status))
+      .reduce((sum, o) => sum + o.price, 0);
+
+    // Platform distributions
+    const platforms = allOrders.reduce((acc: any, curr) => {
+      acc[curr.platform] = (acc[curr.platform] || 0) + 1;
+      return acc;
+    }, {});
+
+    // Top Packages
+    const packageCounts = allOrders.reduce((acc: any, curr) => {
+      acc[curr.packageName] = (acc[curr.packageName] || 0) + 1;
+      return acc;
+    }, {});
+    const topServices = Object.entries(packageCounts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a: any, b: any) => b.count - a.count)
+      .slice(0, 5);
+
+    // Chart Stats (Daily, Weekly, Monthly)
+    const now = new Date();
+    const oneDay = 24 * 60 * 60 * 1000;
+    
+    // Last 7 days daily stats
+    const dailyStats = Array.from({ length: 7 }).map((_, i) => {
+      const d = new Date(now.getTime() - i * oneDay);
+      const label = d.toLocaleDateString("ar-EG", { weekday: "short", day: "numeric" });
+      const dayOrders = allOrders.filter(o => {
+        const oDate = new Date(o.createdAt);
+        return oDate.toDateString() === d.toDateString();
+      });
+      return {
+        label,
+        count: dayOrders.length,
+        revenue: dayOrders.filter(o => completedStatuses.includes(o.status)).reduce((sum, o) => sum + o.price, 0)
+      };
+    }).reverse();
+
+    // Last 4 weeks weekly stats
+    const weeklyStats = Array.from({ length: 4 }).map((_, i) => {
+      const start = new Date(now.getTime() - (i + 1) * 7 * oneDay);
+      const end = new Date(now.getTime() - i * 7 * oneDay);
+      const label = `الأسبوع ${i + 1}`;
+      const weekOrders = allOrders.filter(o => {
+        const oDate = new Date(o.createdAt);
+        return oDate >= start && oDate < end;
+      });
+      return {
+        label,
+        count: weekOrders.length,
+        revenue: weekOrders.filter(o => completedStatuses.includes(o.status)).reduce((sum, o) => sum + o.price, 0)
+      };
+    }).reverse();
+
+    // Last 6 months monthly stats
+    const monthlyStats = Array.from({ length: 6 }).map((_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const label = d.toLocaleDateString("ar-EG", { month: "long" });
+      const monthOrders = allOrders.filter(o => {
+        const oDate = new Date(o.createdAt);
+        return oDate.getMonth() === d.getMonth() && oDate.getFullYear() === d.getFullYear();
+      });
+      return {
+        label,
+        count: monthOrders.length,
+        revenue: monthOrders.filter(o => completedStatuses.includes(o.status)).reduce((sum, o) => sum + o.price, 0)
+      };
+    }).reverse();
+
+    res.json({
+      totalOrders: allOrders.length,
+      statusNew: statusCounts["New"] || statusCounts["جديد"] || 0,
+      statusInExecution: statusCounts["قيد التنفيذ"] || statusCounts["In Progress"] || 0,
+      statusCompleted: statusCounts["Completed"] || statusCounts["مكتمل"] || 0,
+      statusCancelled: statusCounts["Cancelled"] || statusCounts["ملغي"] || 0,
+      statusWaitingPayment: statusCounts["بانتظار الدفع"] || 0,
+      statusProofUploaded: statusCounts["تم رفع إثبات الدفع"] || 0,
+      statusPaymentAccepted: statusCounts["تم قبول الدفع"] || 0,
+      statusPaymentRejected: statusCounts["تم رفض الدفع"] || 0,
+      statusRefunded: statusCounts["مسترجع"] || 0,
+      totalRevenue,
+      customersCount,
+      totalPackages: allPackages.length,
+      platforms,
+      topServices,
+      dailyStats,
+      weeklyStats,
+      monthlyStats,
+      recentOrders: allOrders.slice(0, 10),
+    });
   } catch (error) {
     res.status(500).json({ error: "فشل تجميع الإحصائيات" });
+  }
+});
+
+// Admin Customers Management API
+app.get("/api/admin/customers", authenticateAdmin, async (req: any, res) => {
+  try {
+    const customers = await prisma.customer.findMany({
+      include: {
+        orders: {
+          select: {
+            id: true,
+            packageName: true,
+            platform: true,
+            price: true,
+            currency: true,
+            status: true,
+            createdAt: true,
+          }
+        }
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const result = customers.map(c => {
+      const totalSpend = c.orders.reduce((sum, o) => sum + o.price, 0);
+      const completedOrdersCount = c.orders.filter(o => ["Completed", "مكتمل", "تم قبول الدفع"].includes(o.status)).length;
+      const lastOrder = c.orders[0] || null;
+
+      return {
+        id: c.id,
+        name: c.name,
+        phone: c.phone,
+        createdAt: c.createdAt,
+        totalOrdersCount: c.orders.length,
+        completedOrdersCount,
+        totalSpend,
+        lastOrder,
+        orders: c.orders,
+      };
+    });
+
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: "فشل تحميل قائمة العملاء" });
+  }
+});
+
+// Admin Security Activity Logs API
+app.get("/api/admin/activity-logs", authenticateAdmin, async (req: any, res) => {
+  try {
+    const logs = await prisma.activityLog.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 200,
+    });
+    res.json(logs);
+  } catch (error) {
+    res.status(500).json({ error: "فشل تحميل سجل النشاطات" });
+  }
+});
+
+// Admin Send Test Email API
+app.post("/api/admin/send-test-email", authenticateAdmin, async (req: any, res) => {
+  try {
+    const { host, port, user, pass, secure, senderName, senderEmail, receiver } = req.body;
+    
+    if (!host || !port || !user || !pass || !receiver) {
+      return res.status(400).json({ error: "جميع بيانات SMTP والبريد المستلم مطلوبة لتجربة الإرسال" });
+    }
+
+    const transporter = nodemailer.createTransport({
+      host,
+      port: parseInt(port),
+      secure: secure === "true" || secure === true,
+      auth: { user, pass },
+    });
+
+    await transporter.sendMail({
+      from: `"${senderName || "متجر زودها SMM"}" <${senderEmail || user}>`,
+      to: receiver,
+      subject: "📧 بريد تجريبي من لوحة تحكم زودها",
+      html: `
+        <div style="direction: rtl; font-family: sans-serif; text-align: right; padding: 20px;">
+          <h2 style="color: #4f46e5;">تهانينا! نظام الإيميلات يعمل بنجاح 🎉</h2>
+          <p>تم إرسال هذا البريد الإلكتروني لتأكيد صحة إعدادات SMTP الخاصة بمتجر زودها.</p>
+          <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
+          <p style="font-size: 12px; color: #6b7280;">هذه الرسالة تلقائية، يرجى عدم الرد عليها.</p>
+        </div>
+      `,
+    });
+
+    // Log the test email activity
+    await prisma.activityLog.create({
+      data: {
+        action: "TEST_EMAIL",
+        details: `تم إرسال إيميل تجريبي بنجاح إلى ${receiver}`,
+        adminUser: req.adminUsername,
+        ip: getClientIp(req),
+      },
+    });
+
+    res.json({ success: true, message: "تم إرسال البريد الإلكتروني التجريبي بنجاح!" });
+  } catch (error: any) {
+    console.error("Test email failed:", error);
+    res.status(500).json({ error: `فشل إرسال البريد التجريبي: ${error.message}` });
   }
 });
 

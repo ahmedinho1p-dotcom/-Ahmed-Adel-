@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Star, MessageSquarePlus, MessageSquare, Check } from "lucide-react";
 import { motion } from "motion/react";
 import { Review } from "../types";
+import ScrollReveal from "./ScrollReveal";
 
 interface ReviewSectionProps {
   reviews: Review[];
@@ -55,13 +56,18 @@ export default function ReviewSection({ reviews, onAddReview, darkMode }: Review
   };
 
   return (
-    <section id="reviews-section" className={`py-16 transition-colors duration-300 ${
+    <section id="reviews-section" className={`py-16 md:py-24 transition-colors duration-300 ${
       darkMode ? "bg-neutral-950" : "bg-white"
     }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Section Header */}
-        <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6 mb-12">
+        <ScrollReveal
+          delay={0.1}
+          direction="up"
+          distance={30}
+          className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6 mb-12"
+        >
           <div>
             <span className="text-xs font-bold uppercase tracking-wider text-pink-500 bg-pink-500/10 px-3 py-1 rounded-full">
               تقييمات عملائنا الكرام
@@ -84,7 +90,7 @@ export default function ReviewSection({ reviews, onAddReview, darkMode }: Review
             <MessageSquarePlus className="w-4 h-4" />
             <span>أضف تقييمك للموقع</span>
           </motion.button>
-        </div>
+        </ScrollReveal>
 
         {/* Expandable Review Form */}
         {formOpen && (
@@ -202,49 +208,56 @@ export default function ReviewSection({ reviews, onAddReview, darkMode }: Review
           </motion.div>
         )}
 
-        {/* Reviews Horizontal scroll / Bento Grid */}
+        {/* Reviews Bento Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {reviews.length === 0 ? (
             <div className="col-span-full py-12 text-center text-neutral-500 text-sm">
               لا توجد تقييمات منشورة بعد. كن أول من يكتب تقييماً!
             </div>
           ) : (
-            reviews.map((rev) => (
-              <motion.div
+            reviews.map((rev, index) => (
+              <ScrollReveal
                 key={rev.id}
-                whileHover={{ y: -6, scale: 1.02 }}
-                transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                className={`p-6 rounded-2xl border flex flex-col justify-between transition-all duration-300 hover:shadow-lg ${
-                  darkMode 
-                    ? "bg-neutral-900/40 border-neutral-900 hover:border-neutral-800 text-white" 
-                    : "bg-neutral-50 border-neutral-100 hover:border-neutral-200 text-neutral-900 shadow-sm"
-                }`}
+                delay={(index % 4) * 0.15}
+                direction="up"
+                distance={35}
+                className="h-full"
               >
-                {/* Review Body */}
-                <div className="space-y-3">
-                  <div className="flex items-center gap-1">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Star
-                        key={star}
-                        className={`w-4 h-4 ${
-                          star <= rev.rating ? "text-yellow-400 fill-yellow-400" : "text-neutral-700"
-                        }`}
-                      />
-                    ))}
+                <motion.div
+                  whileHover={{ y: -8, scale: 1.025 }}
+                  transition={{ type: "spring", stiffness: 350, damping: 18 }}
+                  className={`p-6 rounded-2xl border flex flex-col justify-between transition-all duration-300 hover:shadow-xl h-full ${
+                    darkMode 
+                      ? "bg-neutral-900/40 border-neutral-900/60 hover:border-purple-500/30 text-white hover:shadow-purple-500/[0.02]" 
+                      : "bg-neutral-50 border-neutral-200/50 hover:border-pink-500/20 text-neutral-900 shadow-sm hover:shadow-pink-500/[0.04]"
+                  }`}
+                >
+                  {/* Review Body */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star
+                          key={star}
+                          className={`w-4 h-4 ${
+                            star <= rev.rating ? "text-yellow-400 fill-yellow-400" : "text-neutral-700"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <p className="text-xs sm:text-sm leading-relaxed text-neutral-300 dark:text-neutral-300 font-medium text-right line-clamp-4">
+                      "{rev.content}"
+                    </p>
                   </div>
-                  <p className="text-sm leading-relaxed text-neutral-300 font-medium text-right">
-                    "{rev.content}"
-                  </p>
-                </div>
 
-                {/* Customer Details */}
-                <div className="mt-5 pt-4 border-t border-neutral-800/20 flex items-center justify-between">
-                  <span className="text-xs font-bold text-neutral-400">{rev.customerName}</span>
-                  <span className="text-[10px] text-green-500 bg-green-500/10 px-2 py-0.5 rounded-full font-bold">
-                    ✓ عميل موثق
-                  </span>
-                </div>
-              </motion.div>
+                  {/* Customer Details */}
+                  <div className="mt-5 pt-4 border-t border-neutral-800/20 flex items-center justify-between">
+                    <span className="text-xs font-bold text-neutral-450">{rev.customerName}</span>
+                    <span className="text-[10px] text-green-500 bg-green-500/10 px-2 py-0.5 rounded-full font-bold">
+                      ✓ عميل موثق
+                    </span>
+                  </div>
+                </motion.div>
+              </ScrollReveal>
             ))
           )}
         </div>

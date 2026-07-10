@@ -1,6 +1,6 @@
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 generator client {
@@ -22,10 +22,19 @@ model Package {
   discount       Float?   // percentage discount (e.g., 15 for 15% off)
   sortOrder      Int      @default(0)
   createdAt      DateTime @default(now())
+  orders         Order[]
+}
+
+model Customer {
+  id        String   @id @default(uuid())
+  name      String
+  phone     String   @unique // matches whatsappNumber
+  createdAt DateTime @default(now())
+  orders    Order[]
 }
 
 model Order {
-  id                String   @id @default(uuid())
+  id                String         @id @default(uuid())
   customerName      String
   whatsappNumber    String
   pageUrl           String
@@ -34,22 +43,41 @@ model Order {
   platform          String
   price             Float
   currency          String
-  status            String   // "New" | "Contacted" | "Completed" | "Cancelled"
+  status            String         // "New" | "Contacted" | "Completed" | "Cancelled"
   paymentMethod     String?
   paymentSender     String?
   paymentAmount     Float?
-  paymentScreenshot String?  // Stores the base64 screenshot image
-  paymentStatus     String?  // "في انتظار المراجعة" | "مدفوع" | "مرفوض"
-  internalNotes     String?  // Admin internal notes
-  createdAt         DateTime @default(now())
+  paymentScreenshot String?        // Stores the base64 screenshot image
+  paymentStatus     String?        // "في انتظار المراجعة" | "مدفوع" | "مرفوض"
+  internalNotes     String?        // Admin internal notes
+  createdAt         DateTime       @default(now())
+  reviewedAt        DateTime?      // Time when payment was approved/rejected
+  package           Package        @relation(fields: [packageId], references: [id], onDelete: NoAction)
+  customer          Customer?      @relation(fields: [whatsappNumber], references: [phone], onDelete: SetNull)
+  history           OrderHistory[]
+}
+
+model OrderHistory {
+  id        String   @id @default(uuid())
+  orderId   String
+  status    String
+  notes     String?
+  createdAt DateTime @default(now())
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
 
 model Coupon {
-  id              String   @id @default(uuid())
-  code            String   @unique
-  discountPercent Float
-  active          Boolean  @default(true)
-  createdAt       DateTime @default(now())
+  id              String    @id @default(uuid())
+  code            String    @unique
+  discountPercent Float     // Legacy field for compatibility
+  discountType    String    @default("PERCENT") // "PERCENT" | "FIXED"
+  discountValue   Float     @default(0.0)
+  expiresAt       DateTime?
+  minPurchase     Float?
+  maxUses         Int?
+  useCount        Int       @default(0)
+  active          Boolean   @default(true)
+  createdAt       DateTime  @default(now())
 }
 
 model Setting {
@@ -76,3 +104,11 @@ model GiftClaim {
   createdAt     DateTime @default(now())
 }
 
+model ActivityLog {
+  id        String   @id @default(uuid())
+  action    String
+  details   String?
+  ip        String?
+  adminUser String?
+  createdAt DateTime @default(now())
+}

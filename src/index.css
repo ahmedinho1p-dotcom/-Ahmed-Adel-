@@ -42,6 +42,51 @@ body {
   animation: gold-shine 4s linear infinite;
 }
 
+/* Flowing border gradients around form inputs */
+@keyframes border-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.glowing-animated-border-dark {
+  border: 2px solid transparent !important;
+  background: 
+    linear-gradient(#050505, #050505) padding-box, 
+    linear-gradient(135deg, #a855f7, #ec4899, #3b82f6, #ec4899, #a855f7) border-box !important;
+  background-size: 200% 200% !important;
+  animation: border-flow 4s linear infinite !important;
+  box-shadow: 0 0 12px rgba(236, 72, 153, 0.15);
+  transition: box-shadow 0.3s ease, transform 0.2s ease;
+}
+
+.glowing-animated-border-dark:focus-within, .glowing-animated-border-dark:focus {
+  box-shadow: 0 0 18px rgba(236, 72, 153, 0.35), 0 0 4px rgba(168, 85, 247, 0.2) !important;
+  transform: translateY(-1px);
+}
+
+.glowing-animated-border-light {
+  border: 2px solid transparent !important;
+  background: 
+    linear-gradient(#ffffff, #ffffff) padding-box, 
+    linear-gradient(135deg, #a855f7, #ec4899, #3b82f6, #ec4899, #a855f7) border-box !important;
+  background-size: 200% 200% !important;
+  animation: border-flow 4s linear infinite !important;
+  box-shadow: 0 0 12px rgba(236, 72, 153, 0.08);
+  transition: box-shadow 0.3s ease, transform 0.2s ease;
+}
+
+.glowing-animated-border-light:focus-within, .glowing-animated-border-light:focus {
+  box-shadow: 0 0 18px rgba(236, 72, 153, 0.22), 0 0 4px rgba(168, 85, 247, 0.15) !important;
+  transform: translateY(-1px);
+}
+
 /* Custom scrollbars */
 ::-webkit-scrollbar {
   width: 8px;
@@ -56,4 +101,120 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #404040;
+}
+
+/* Redesigned Premium Rotating Glow Cards */
+@keyframes rotate-gradient {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.premium-glow-card-dark {
+  position: relative;
+  border-radius: 24px;
+  background: #050505;
+  overflow: hidden;
+  border: 1px solid rgba(168, 85, 247, 0.15);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
+}
+
+.premium-glow-card-dark::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 10%,
+    #a855f7 30%,
+    #ec4899 50%,
+    #3b82f6 70%,
+    transparent 90%
+  );
+  animation: rotate-gradient 8s linear infinite;
+  opacity: 0.25;
+  pointer-events: none;
+  z-index: 1;
+  transition: opacity 0.4s ease;
+}
+
+.premium-glow-card-dark::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  background: linear-gradient(180deg, #09090b 0%, #030303 100%);
+  border-radius: 22px;
+  z-index: 2;
+  transition: opacity 0.4s ease;
+}
+
+.premium-glow-card-dark:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 40px rgba(236, 72, 153, 0.12), 0 0 20px rgba(168, 85, 247, 0.08);
+  border-color: rgba(236, 72, 153, 0.3);
+}
+
+.premium-glow-card-dark:hover::before {
+  opacity: 0.55;
+  animation-duration: 5s; /* Speeds up slightly on hover for active feel */
+}
+
+/* Light Mode version */
+.premium-glow-card-light {
+  position: relative;
+  border-radius: 24px;
+  background: #ffffff;
+  overflow: hidden;
+  border: 1px solid rgba(236, 72, 153, 0.1);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+}
+
+.premium-glow-card-light::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 10%,
+    #a855f7 30%,
+    #ec4899 50%,
+    #3b82f6 70%,
+    transparent 90%
+  );
+  animation: rotate-gradient 8s linear infinite;
+  opacity: 0.18;
+  pointer-events: none;
+  z-index: 1;
+  transition: opacity 0.4s ease;
+}
+
+.premium-glow-card-light::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  background: linear-gradient(180deg, #ffffff 0%, #fafafa 100%);
+  border-radius: 22px;
+  z-index: 2;
+}
+
+.premium-glow-card-light:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 30px rgba(236, 72, 153, 0.08), 0 0 15px rgba(168, 85, 247, 0.05);
+  border-color: rgba(236, 72, 153, 0.25);
+}
+
+.premium-glow-card-light:hover::before {
+  opacity: 0.4;
+  animation-duration: 5s;
 }

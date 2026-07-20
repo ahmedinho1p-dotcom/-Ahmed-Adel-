@@ -3,14 +3,16 @@ import { motion, AnimatePresence, useScroll, useSpring, useTransform } from "mot
 import { 
   Sparkles, Search, MessageCircle, Phone, ArrowLeft, Facebook, Instagram, 
   Youtube, Star, CheckCircle, ShieldAlert, Award, ChevronLeft, ChevronRight, Check,
-  Clock, CreditCard, RefreshCw, AlertCircle, Gift, Music
+  Clock, CreditCard, RefreshCw, AlertCircle, Gift, Rocket, Shield, ShoppingBag
 } from "lucide-react";
+import { TiktokIcon } from "./components/TiktokIcon";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import FloatingButtons from "./components/FloatingButtons";
 import StatsCounter from "./components/StatsCounter";
 import ReviewSection from "./components/ReviewSection";
 import OrderModal from "./components/OrderModal";
+import CheckoutPage from "./components/CheckoutPage";
 import CompanyInfo from "./components/CompanyInfo";
 import AdminPanel from "./components/AdminPanel";
 import SplashScreen from "./components/SplashScreen";
@@ -94,6 +96,7 @@ const getPackageStyle = (packageName: string, darkMode: boolean) => {
 
 export default function App() {
   const [showSplash, setShowSplash] = useState<boolean>(true);
+  const [splashDuration, setSplashDuration] = useState<number>(2000);
 
   // Scroll tracking for luxury progress indicator and parallax orbs
   const { scrollY, scrollYProgress } = useScroll();
@@ -110,7 +113,7 @@ export default function App() {
     setShowSplash(false);
   };
 
-  const [currentView, setView] = useState<'home' | 'info' | 'admin'>(() => {
+  const [currentView, setView] = useState<'home' | 'info' | 'admin' | 'checkout'>(() => {
     if (typeof window !== "undefined") {
       const path = window.location.pathname;
       if (path === "/admin") {
@@ -121,6 +124,7 @@ export default function App() {
         return 'home';
       }
       if (path === "/info") return 'info';
+      if (path === "/checkout") return 'checkout';
     }
     return 'home';
   });
@@ -141,6 +145,8 @@ export default function App() {
         }
       } else if (path === "/info") {
         setView("info");
+      } else if (path === "/checkout") {
+        setView("checkout");
       } else {
         setView("home");
       }
@@ -150,7 +156,7 @@ export default function App() {
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
-  const handleSetView = (view: 'home' | 'info' | 'admin') => {
+  const handleSetView = (view: 'home' | 'info' | 'admin' | 'checkout') => {
     if (view === 'admin') {
       const hasToken = localStorage.getItem("zwdha_admin_token");
       // Allow going to admin if we navigated via direct interaction (e.g., clicking 'زد')
@@ -163,6 +169,8 @@ export default function App() {
       if (typeof window !== "undefined") {
         if (view === 'info') {
           window.history.pushState({}, "", "/info");
+        } else if (view === 'checkout') {
+          window.history.pushState({}, "", "/checkout");
         } else {
           window.history.pushState({}, "", "/");
         }
@@ -220,6 +228,13 @@ export default function App() {
   // Checkout modal
   const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
   const [isGiftModalOpen, setIsGiftModalOpen] = useState(false);
+
+  // Safety redirect for checkout
+  useEffect(() => {
+    if (currentView === 'checkout' && !selectedPackage) {
+      handleSetView('home');
+    }
+  }, [currentView, selectedPackage]);
 
   // Loading states
   const [loading, setLoading] = useState(true);
@@ -291,7 +306,7 @@ export default function App() {
       const data = await res.json();
       if (res.ok && data.success) {
         // Refresh orders inside any active admin console
-        return { success: true, message: data.message };
+        return { success: true, message: data.message, order: data.order, generatedCoupon: data.generatedCoupon };
       } else {
         return { success: false, message: "", error: data.error };
       }
@@ -316,6 +331,15 @@ export default function App() {
     } catch (e) {
       return false;
     }
+  };
+
+  // Convert any string's Eastern Arabic numerals (٠١٢٣٤٥٦٧٨٩) to standard English numerals (0123456789)
+  const toEnglishNumerals = (str: string | undefined | null) => {
+    if (!str) return "";
+    return str.replace(/[٠١٢٣٤٥٦٧٨٩]/g, (d) => {
+      const idx = "٠١٢٣٤٥٦٧٨٩".indexOf(d);
+      return idx !== -1 ? "0123456789"[idx] : d;
+    });
   };
 
   // Exchange rate definitions based on database settings (EGP to target currency multiplier)
@@ -352,7 +376,7 @@ export default function App() {
     const platform = pack.platform;
 
     if (platform === "Google Reviews" || name.includes("تقييم") || desc.includes("تقييم")) {
-      return "تقييم Reviews";
+      return "تقييم";
     }
     if (
       name.includes("لايك على تعليق") || 
@@ -362,15 +386,15 @@ export default function App() {
       name.includes("تعليق") || 
       name.includes("comment like")
     ) {
-      return "لايك على تعليق Comment Likes";
+      return "لايك على تعليق";
     }
     if (name.includes("لايك") || desc.includes("لايك") || name.includes("إعجاب") || name.includes("like")) {
-      return "لايك Likes";
+      return "لايك";
     }
     if (name.includes("مشاهد") || desc.includes("مشاهد") || name.includes("view")) {
-      return "مشاهدة Views";
+      return "مشاهدة";
     }
-    return "متابع Followers";
+    return "متابع";
   };
 
   // Render Platform Icon with dynamic pulsating and hover rotation animations
@@ -380,7 +404,7 @@ export default function App() {
     if (platform === "Instagram") icon = <Instagram className={`${iconClass} text-pink-500`} />;
     if (platform === "Facebook") icon = <Facebook className={`${iconClass} text-blue-500`} />;
     if (platform === "YouTube") icon = <Youtube className={`${iconClass} text-red-500`} />;
-    if (platform === "TikTok") icon = <Music className={`${iconClass} text-[#00f2fe]`} />;
+    if (platform === "TikTok") icon = <TiktokIcon className={`${iconClass} text-[#00f2fe]`} />;
 
     return (
       <motion.div
@@ -393,6 +417,52 @@ export default function App() {
         {icon}
       </motion.div>
     );
+  };
+
+  // Render a large watermark-style background icon changing dynamically with the platform
+  const renderPlatformWatermark = (platform: string) => {
+    const baseClass = "absolute -top-4 -right-4 w-36 h-36 pointer-events-none opacity-[0.06] dark:opacity-[0.05] transform rotate-12 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-[20deg] z-0";
+    if (platform === "Instagram") return <Instagram className={`${baseClass} text-pink-500`} />;
+    if (platform === "Facebook") return <Facebook className={`${baseClass} text-blue-500`} />;
+    if (platform === "YouTube") return <Youtube className={`${baseClass} text-red-500`} />;
+    if (platform === "TikTok") return <TiktokIcon className={`${baseClass} text-[#00f2fe]`} />;
+    return <Star className={`${baseClass} text-yellow-500`} />;
+  };
+
+  const getPlatformArabicName = (platform: string) => {
+    if (platform === "Instagram") return "إنستقرام";
+    if (platform === "Facebook") return "فيسبوك";
+    if (platform === "YouTube") return "يوتيوب";
+    if (platform === "TikTok") return "تيك توك";
+    if (platform === "Google Reviews") return "جوجل ماب";
+    return platform;
+  };
+
+  const getPlatformIconColor = (platform: string) => {
+    if (platform === "Instagram") return "text-pink-500";
+    if (platform === "Facebook") return "text-blue-500";
+    if (platform === "YouTube") return "text-red-500";
+    if (platform === "TikTok") return "text-[#00f2fe]";
+    return "text-yellow-500";
+  };
+
+  const getPlatformBoxStyle = (platform: string) => {
+    if (platform === "Instagram") {
+      return "bg-gradient-to-br from-[#f09433] via-[#e1306c] to-[#bc2a8d] text-white border-[#e1306c]/30 shadow-[#e1306c]/10";
+    }
+    if (platform === "Facebook") {
+      return "bg-gradient-to-br from-[#1877F2] to-[#0a51b2] text-white border-blue-400/30 shadow-blue-500/10";
+    }
+    if (platform === "YouTube") {
+      return "bg-gradient-to-br from-[#FF0000] to-[#b30000] text-white border-red-400/30 shadow-red-500/10";
+    }
+    if (platform === "TikTok") {
+      return "bg-gradient-to-br from-zinc-900 via-neutral-800 to-zinc-950 text-white border-cyan-400/30 shadow-cyan-400/10";
+    }
+    if (platform === "Google Reviews") {
+      return "bg-gradient-to-br from-[#4285F4] via-[#34A853] to-[#FBBC05] text-white border-blue-400/30 shadow-blue-500/10";
+    }
+    return "bg-gradient-to-br from-purple-600 to-pink-600 text-white border-pink-400/30 shadow-pink-500/10";
   };
 
   // Filter package cards
@@ -429,7 +499,7 @@ export default function App() {
         {loading ? (
           <div className="py-32 text-center flex flex-col items-center justify-center gap-4">
             <div className="w-12 h-12 border-4 border-t-pink-500 border-neutral-800 rounded-full animate-spin" />
-            <p className="text-sm text-neutral-400 font-bold">جاري تشغيل وتحميل سيرفر زودها...</p>
+            <p className="text-sm text-neutral-400 font-bold">جاري تشغيل وتحميل سيرفر Zawdha...</p>
           </div>
         ) : (
           <>
@@ -452,8 +522,8 @@ export default function App() {
                     <ScrollReveal delay={0.15} direction="up" duration={0.9} blur={true} scale={true}>
                       <h1 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tight leading-[1.25] text-transparent bg-clip-text bg-gradient-to-r from-white via-neutral-100 to-neutral-400">
                         ضخم حضورك الرقمي مع <br className="hidden sm:inline" />
-                        <span className="bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 bg-clip-text text-transparent">
-                          زودها ZWDHA
+                        <span className="bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 bg-clip-text text-transparent font-medium">
+                          Zawdha
                         </span>
                       </h1>
                     </ScrollReveal>
@@ -696,7 +766,7 @@ export default function App() {
                               <div className="space-y-1">
                                 <span className="text-[10px] text-neutral-405 block">تاريخ الطلب:</span>
                                 <span className="text-neutral-400 font-mono">
-                                  {new Date(trackedOrder.createdAt).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' })}
+                                  {new Date(trackedOrder.createdAt).toLocaleString('ar-EG-u-nu-latn', { dateStyle: 'medium', timeStyle: 'short' })}
                                 </span>
                               </div>
                             </div>
@@ -732,104 +802,164 @@ export default function App() {
                               className="h-full"
                             >
                               <motion.div
-                                whileHover={{ y: -8, scale: 1.015 }}
-                                whileTap={{ scale: 0.985 }}
-                                className={`rounded-2xl border p-6 flex flex-col justify-between transition-all duration-300 relative group overflow-hidden h-full ${style.cardClass}`}
+                                whileHover={{ y: -8 }}
+                                transition={{ duration: 0.35, ease: "easeOut" }}
+                                className={`premium-glow-card-${darkMode ? "dark" : "light"} h-full flex flex-col transition-all duration-300 relative overflow-hidden group`}
                               >
-                                {/* Inner body wrapper to allow custom layouts */}
-                                <div className="w-full h-full flex flex-col justify-between relative z-10">
+                                {/* Platform Watermark in Background */}
+                                {renderPlatformWatermark(pack.platform)}
+
+                                {/* Inner content layout with relative z-10 to overlay above rotating border/watermark */}
+                                <div className="relative z-10 p-6 flex flex-col h-full justify-between text-right">
                                   
-                                  <div className="space-y-4">
-                                    {/* Header (Badge + Platform) */}
-                                    <div className="flex justify-between items-center">
-                                      <span className="text-[10px] font-black text-pink-500 bg-pink-500/10 px-2.5 py-1 rounded-full flex items-center gap-1 font-mono">
-                                        {renderPlatformIcon(pack.platform)}
-                                        {pack.platform}
+                                  <div>
+                                    {/* 1. Header Badges */}
+                                    <div className="flex justify-between items-center gap-2 mb-5">
+                                      <span className="text-[10px] font-black text-white bg-gradient-to-r from-orange-500 to-rose-500 px-3 py-1.5 rounded-full flex items-center gap-1 shadow-sm shadow-orange-500/10">
+                                        الأكثر طلباً 🔥
                                       </span>
-                                      <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${style.badgeClass}`}>
+                                      <span className={`text-[10px] font-bold px-3 py-1.5 rounded-full border border-neutral-200/10 flex items-center gap-1 ${style.badgeClass}`}>
+                                        <Award className="w-3 h-3" />
                                         {style.badgeText}
                                       </span>
                                     </div>
 
-                                    {/* Package title */}
-                                    <h3 className={`text-base font-black leading-snug ${darkMode ? "text-white" : "text-neutral-900"}`}>{pack.name}</h3>
-                                    
-                                    {/* Followers amount badge with dynamic service wording */}
-                                    <div className="flex items-baseline gap-2">
-                                      <span className={`text-3xl font-black font-mono tracking-tight ${style.accentText}`}>
-                                        {pack.followersCount}
-                                      </span>
-                                      <span className="text-xs font-bold text-neutral-450">{getServiceLabel(pack)}</span>
+                                    {/* 2. Package Title (Centered with Shield Icon) */}
+                                    <div className="flex items-center justify-center gap-1.5 mb-4">
+                                      <Shield className="w-4 h-4 text-purple-400 fill-purple-400/10" />
+                                      <h3 className={`text-sm md:text-base font-extrabold leading-snug tracking-tight ${darkMode ? "text-neutral-100" : "text-neutral-900"}`}>
+                                        {pack.name}
+                                      </h3>
                                     </div>
 
-                                    <p className="text-xs text-neutral-450 leading-relaxed min-h-[48px]">{pack.description}</p>
-                                    
-                                    {/* Delivery and features */}
-                                    <div className="space-y-2 border-t border-neutral-800/20 pt-4 text-xs text-neutral-450">
-                                      <div className="flex justify-between">
-                                        <span>⏱️ وقت البدء والتسليم:</span>
-                                        <span className="font-bold text-neutral-300">{pack.deliveryTime}</span>
+                                    {/* 3. Huge Quantity / Metric Display (Centered) */}
+                                    <div className="text-center mb-4">
+                                      <span className={`text-5xl md:text-6xl font-black font-mono tracking-tight bg-gradient-to-b ${darkMode ? "from-white via-neutral-100 to-neutral-400" : "from-neutral-900 via-neutral-800 to-neutral-600"} bg-clip-text text-transparent`}>
+                                        {toEnglishNumerals(pack.followersCount)}
+                                      </span>
+                                      
+                                      <div className="flex items-center justify-center gap-3 mt-1.5">
+                                        <div className="h-[2px] w-8 bg-gradient-to-r from-transparent to-pink-500"></div>
+                                        <span className="text-pink-500 dark:text-pink-400 font-extrabold text-xs">
+                                          {getServiceLabel(pack)}
+                                        </span>
+                                        <div className="h-[2px] w-8 bg-gradient-to-l from-transparent to-pink-500"></div>
+                                      </div>
+                                    </div>
+
+                                    {/* 4. Package Description */}
+                                    <p className="text-xs text-center text-neutral-400 dark:text-neutral-400 leading-relaxed min-h-[48px] px-2 mb-5">
+                                      {pack.description || "زيادة ثابتة بجودة عالية مع تعويض مجاني لأي نقص وخدمة آمنة تماماً على حسابك."}
+                                    </p>
+
+                                    {/* 5. 4-Column Features Grid */}
+                                    <div className="grid grid-cols-4 gap-1.5 md:gap-2 mb-4 text-center">
+                                      {/* المنصة المستهدفة */}
+                                      <div className={`${getPlatformBoxStyle(pack.platform)} border rounded-2xl p-1.5 md:p-2.5 flex flex-col items-center text-center justify-center transition-all h-full`}>
+                                        <div className="mb-1">
+                                          {pack.platform === "Instagram" && <Instagram className="w-4 h-4 text-white" />}
+                                          {pack.platform === "Facebook" && <Facebook className="w-4 h-4 text-white" />}
+                                          {pack.platform === "YouTube" && <Youtube className="w-4 h-4 text-white" />}
+                                          {pack.platform === "TikTok" && <TiktokIcon className="w-4 h-4 text-white" />}
+                                          {pack.platform === "Google Reviews" && <Star className="w-4 h-4 text-white fill-white" />}
+                                        </div>
+                                        <span className="text-[8px] md:text-[9px] text-white/90 font-bold block">المنصة</span>
+                                        <span className="text-[9px] md:text-[10px] text-white font-black mt-0.5 break-all">
+                                          {getPlatformArabicName(pack.platform)}
+                                        </span>
+                                      </div>
+
+                                      {/* وقت البدء (Golden with White Text) */}
+                                      <div className="bg-gradient-to-br from-amber-500 via-amber-500 to-yellow-600 dark:from-amber-600 dark:via-amber-600 dark:to-yellow-700 text-white shadow-sm border border-amber-400/30 rounded-2xl p-1.5 md:p-2.5 flex flex-col items-center text-center justify-center transition-all h-full">
+                                        <Clock className="w-4 h-4 text-white mb-1" />
+                                        <span className="text-[8px] md:text-[9px] text-white/90 font-bold block">وقت البدء</span>
+                                        <span className="text-[9px] md:text-[10px] text-white font-black mt-0.5 whitespace-normal break-words leading-tight">
+                                          {toEnglishNumerals(pack.deliveryTime) || "سريع فوري"}
+                                        </span>
+                                      </div>
+
+                                      {/* الجودة (Emerald Green with White Text) */}
+                                      <div className="bg-gradient-to-br from-emerald-500 via-teal-500 to-emerald-600 dark:from-emerald-600 dark:via-teal-600 dark:to-emerald-700 text-white shadow-sm border border-emerald-400/30 rounded-2xl p-1.5 md:p-2.5 flex flex-col items-center text-center justify-center transition-all h-full">
+                                        <Star className="w-4 h-4 text-white fill-white mb-1" />
+                                        <span className="text-[8px] md:text-[9px] text-white/90 font-bold block">الجودة</span>
+                                        <span className="text-[9px] md:text-[10px] text-white font-extrabold mt-0.5">
+                                          عالية جداً
+                                        </span>
+                                      </div>
+
+                                      {/* التشغيل (Purple/Violet with White Text) */}
+                                      <div className="bg-gradient-to-br from-purple-600 to-indigo-700 dark:from-purple-700 dark:to-indigo-850 text-white shadow-sm border border-purple-500/30 rounded-2xl p-1.5 md:p-2.5 flex flex-col items-center text-center justify-center transition-all h-full">
+                                        <Rocket className="w-4 h-4 text-white mb-1" />
+                                        <span className="text-[8px] md:text-[9px] text-white/90 font-bold block">التشغيل</span>
+                                        <span className="text-[9px] md:text-[10px] text-white font-extrabold mt-0.5">
+                                          تدريجي وآمن
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    {/* 6. Dynamic Split Perks Grid (Double Column) - Beautiful Separate Premium Cards */}
+                                    <div className="grid grid-cols-2 gap-2.5 mb-5">
+                                      {/* ضمان تعويض كامل (Royal Blue/Indigo trustworthy card) */}
+                                      <div className="bg-gradient-to-br from-blue-600 via-blue-600 to-indigo-700 dark:from-blue-700 dark:via-blue-700 dark:to-indigo-850 text-white border border-blue-400/30 rounded-2xl p-3 flex items-center gap-2 justify-start shadow-sm shadow-blue-500/5">
+                                        <CheckCircle className="w-5 h-5 text-white flex-shrink-0" />
+                                        <div className="text-right">
+                                          <span className="text-[10px] font-black text-white block leading-tight">ضمان تعويض كامل</span>
+                                          <span className="text-[8.5px] text-white/90 block mt-0.5">إذا حدث أي نقص</span>
+                                        </div>
                                       </div>
                                       
-                                      {/* Beautiful Interactive Gift Pill Button */}
-                                      {pack.gift && (
-                                        <motion.div
-                                          whileHover={{ scale: 1.02 }}
-                                          whileTap={{ scale: 0.98 }}
-                                          className="mt-3.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between gap-2 shadow-lg shadow-amber-500/5 select-none"
-                                        >
-                                          <div className="flex items-center gap-2">
-                                            <span className="text-sm">🎁</span>
-                                            <span className="text-xs font-bold text-amber-500 dark:text-amber-400">هدية إضافية:</span>
-                                          </div>
-                                          <span className="text-xs font-black bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 dark:from-amber-400 dark:via-orange-400 dark:to-amber-300 bg-clip-text text-transparent flex items-center gap-1">
-                                            {pack.gift === "Like" ? "زيادة لايكات Like ❤️" :
-                                             pack.gift === "Follow" ? "زيادة متابعين Follow 👤" :
-                                             pack.gift === "Both" ? "لايكات ومتابعين Like & Follow ✨" :
-                                             pack.gift}
+                                      {/* خصم إضافي (Fiery Rose/Orange enticing gift card) */}
+                                      <div className="bg-gradient-to-br from-pink-500 via-rose-500 to-orange-500 dark:from-pink-600 dark:via-rose-600 dark:to-orange-600 text-white border border-rose-400/30 rounded-2xl p-3 flex items-center gap-2 justify-start shadow-sm shadow-rose-500/5">
+                                        <Gift className="w-5 h-5 text-white flex-shrink-0" />
+                                        <div className="text-right">
+                                          <span className="text-[10px] font-black text-white block leading-tight">
+                                            خصم {pack.discount ? toEnglishNumerals(pack.discount.toString()) + "%" : "10%"}
                                           </span>
-                                        </motion.div>
-                                      )}
-
-                                      {/* Discount percentage tag */}
-                                      {pack.discount && (
-                                        <div className="flex justify-between text-green-500 font-bold">
-                                          <span>🔥 خصم فوري:</span>
-                                          <span>وفر {pack.discount}% خصم اليوم!</span>
+                                          <span className="text-[8.5px] text-white/90 block mt-0.5">على طلبك القادم</span>
                                         </div>
-                                      )}
+                                      </div>
                                     </div>
                                   </div>
 
-                                  {/* Price block & button */}
-                                  <div className="mt-6 pt-4 border-t border-neutral-800/15 flex items-center justify-between gap-4">
-                                    <div className="flex flex-col">
+                                  {/* 7. Footer: Price & Large Action Button (Stacked like the screenshot) */}
+                                  <div className="pt-2 border-t border-neutral-150 dark:border-neutral-800/30 flex flex-col items-center">
+                                    {/* Price Display */}
+                                    <div className="text-center mb-3 flex flex-col items-center justify-center gap-0.5">
                                       {pack.discount && (
-                                        <span className="text-[10px] text-neutral-500 line-through font-mono">
-                                          {getConvertedPriceText(pack.price)}
+                                        <span className="text-[11px] text-neutral-400 dark:text-neutral-500 line-through font-mono">
+                                          {toEnglishNumerals(getConvertedPriceText(pack.price))}
                                         </span>
                                       )}
-                                      <span className="text-lg font-black font-mono text-pink-500">
-                                        {getConvertedPriceText(pack.price, pack.discount)}
+                                      <span className="text-3xl font-black font-mono text-pink-500 dark:text-pink-400 tracking-tight">
+                                        {toEnglishNumerals(getConvertedPriceText(pack.price, pack.discount))}
                                       </span>
                                     </div>
 
+                                    {/* Full Width Order Button */}
                                     <motion.button
                                       id={`pkg-order-btn-${pack.id}`}
-                                      onClick={() => setSelectedPackage(pack)}
-                                      whileHover={{ scale: 1.06, filter: "hue-rotate(8deg) brightness(1.15) contrast(1.05)" }}
-                                      whileTap={{ scale: 0.93, filter: "brightness(0.95)" }}
-                                      transition={{ type: "spring", stiffness: 450, damping: 15 }}
-                                      className={`px-5 py-2.5 rounded-xl font-extrabold text-xs transition-all duration-300 cursor-pointer touch-manipulation active:scale-95 ${style.buttonClass}`}
+                                      onClick={() => {
+                                        setSelectedPackage(pack);
+                                        setSplashDuration(1000);
+                                        setShowSplash(true);
+                                        handleSetView('checkout');
+                                      }}
+                                      whileHover={{ scale: 1.02, shadow: "0px 10px 25px rgba(236,72,153,0.2)" }}
+                                      whileTap={{ scale: 0.98 }}
+                                      transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                                      className="w-full bg-gradient-to-r from-purple-600 via-pink-600 to-pink-500 text-white font-black py-3.5 px-6 rounded-2xl flex items-center justify-center gap-2 cursor-pointer shadow-md hover:opacity-95 transition-all duration-300 touch-manipulation group"
                                     >
-                                      اطلب الآن 🚀
+                                      <ShoppingBag className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                                      <span className="text-xs font-black">اطلب الآن</span>
                                     </motion.button>
+
+                                    {/* Safe Delivery Prompt */}
+                                    <div className="text-center mt-3.5 flex items-center justify-center gap-1.5 text-neutral-400 dark:text-neutral-500 text-[10px] font-bold">
+                                      <span>🔒 تسليم آمن • لا نحتاج بياناتك</span>
+                                    </div>
                                   </div>
 
                                 </div>
-
-                                {/* Glow/reflect premium backgrounds */}
-                                <div className={`${style.glowBg}`} />
                               </motion.div>
                             </ScrollReveal>
                           );
@@ -861,7 +991,7 @@ export default function App() {
             {/* 2. COMPANY INFORMATION PAGE VIEW */}
             {currentView === 'info' && (
               <div className="animate-fade-in">
-                <CompanyInfo darkMode={darkMode} />
+                <CompanyInfo darkMode={darkMode} whatsappNumber={settings.whatsapp_number} />
               </div>
             )}
 
@@ -875,6 +1005,20 @@ export default function App() {
                 />
               </div>
             )}
+
+            {/* 4. DETAILED CHECKOUT PAGE VIEW */}
+            {currentView === 'checkout' && selectedPackage && (
+              <div className="animate-fade-in">
+                <CheckoutPage
+                  pack={selectedPackage}
+                  currency={currency}
+                  exchangeRates={exchangeRates}
+                  onClose={() => handleSetView('home')}
+                  onSubmitOrder={handleSubmitOrder}
+                  darkMode={darkMode}
+                />
+              </div>
+            )}
           </>
         )}
 
@@ -882,19 +1026,7 @@ export default function App() {
 
       {/* Global Footer - ONLY render if not in admin view */}
       {currentView !== 'admin' && (
-        <Footer setView={handleSetView} darkMode={darkMode} />
-      )}
-
-      {/* Checkout Forms Popup Modal */}
-      {selectedPackage && (
-        <OrderModal
-          pack={selectedPackage}
-          currency={currency}
-          exchangeRates={exchangeRates}
-          onClose={() => setSelectedPackage(null)}
-          onSubmitOrder={handleSubmitOrder}
-          darkMode={darkMode}
-        />
+        <Footer setView={handleSetView} darkMode={darkMode} whatsappNumber={settings.whatsapp_number} />
       )}
 
       {/* Daily Free Gift Popup Modal */}
@@ -902,13 +1034,14 @@ export default function App() {
         isOpen={isGiftModalOpen}
         onClose={() => setIsGiftModalOpen(false)}
         darkMode={darkMode}
+        whatsappNumber={settings.whatsapp_number}
       />
 
       {/* Floating social contact parameters - ONLY render if not in admin view */}
-      {currentView !== 'admin' && <FloatingButtons />}
+      {currentView !== 'admin' && <FloatingButtons whatsappNumber={settings.whatsapp_number} />}
 
       {showSplash && (
-        <SplashScreen onComplete={handleSplashComplete} />
+        <SplashScreen onComplete={handleSplashComplete} duration={splashDuration} />
       )}
 
     </div>

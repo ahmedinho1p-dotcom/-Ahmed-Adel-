@@ -3,10 +3,13 @@ import { Phone, Mail, MessageCircle, Heart, ShieldCheck } from "lucide-react";
 interface FooterProps {
   setView: (v: 'home' | 'info' | 'admin') => void;
   darkMode: boolean;
+  whatsappNumber?: string;
 }
 
-export default function Footer({ setView, darkMode }: FooterProps) {
+export default function Footer({ setView, darkMode, whatsappNumber = "01124656914" }: FooterProps) {
   const currentYear = new Date().getFullYear();
+  const cleanPhone = whatsappNumber.trim();
+  const waFormat = cleanPhone.startsWith("0") && cleanPhone.length === 11 ? "2" + cleanPhone : cleanPhone;
 
   return (
     <footer className={`border-t transition-colors duration-300 ${
@@ -21,8 +24,8 @@ export default function Footer({ setView, darkMode }: FooterProps) {
               <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#833ab4] via-[#fd1d1d] to-[#fcb045] flex items-center justify-center">
                 <span className="text-white font-black text-sm">Z</span>
               </div>
-              <span className={`text-lg font-bold ${darkMode ? "text-white" : "text-neutral-900"}`}>
-                زودها ZWDHA
+              <span className={`text-lg font-medium ${darkMode ? "text-white" : "text-neutral-900"}`}>
+                Zawdha
               </span>
             </div>
             <p className="text-sm leading-relaxed">
@@ -58,7 +61,7 @@ export default function Footer({ setView, darkMode }: FooterProps) {
                   onClick={() => setView('info')} 
                   className="hover:text-pink-500 transition-colors text-right w-full"
                 >
-                  لماذا تختار زودها؟ (من نحن)
+                  لماذا تختار Zawdha؟ (من نحن)
                 </button>
               </li>
               <li>
@@ -96,11 +99,11 @@ export default function Footer({ setView, darkMode }: FooterProps) {
             <ul className="space-y-3.5 text-sm">
               <li className="flex items-center gap-3">
                 <Phone className="w-4 h-4 text-pink-500 shrink-0" />
-                <a href="tel:01558676497" className="hover:text-pink-500 transition-colors font-mono">01558676497</a>
+                <a href={`tel:${cleanPhone}`} className="hover:text-pink-500 transition-colors font-mono">{cleanPhone}</a>
               </li>
               <li className="flex items-center gap-3">
                 <MessageCircle className="w-4 h-4 text-[#25d366] shrink-0" />
-                <a href="https://wa.me/201558676497" target="_blank" rel="noopener noreferrer" className="hover:text-[#25d366] transition-colors font-mono">01558676497 (واتساب)</a>
+                <a href={`https://wa.me/${waFormat}`} target="_blank" rel="noopener noreferrer" className="hover:text-[#25d366] transition-colors font-mono">{cleanPhone} (واتساب)</a>
               </li>
               <li className="flex items-center gap-3">
                 <Mail className="w-4 h-4 text-pink-500 shrink-0" />
@@ -114,7 +117,7 @@ export default function Footer({ setView, darkMode }: FooterProps) {
         <hr className={`my-10 ${darkMode ? "border-neutral-900" : "border-neutral-200"}`} />
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
-          <p>© {currentYear} زودها ZWDHA SMM. جميع الحقوق محفوظة.</p>
+          <p>© {currentYear} Zawdha. جميع الحقوق محفوظة.</p>
           <div className="flex items-center gap-1">
             <span>تم بكل حب</span>
             <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" />

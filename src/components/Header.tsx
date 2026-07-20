@@ -62,7 +62,7 @@ export default function Header({
                   : darkMode ? "text-neutral-300 hover:text-white" : "text-neutral-600 hover:text-neutral-900"
               }`}
             >
-              لماذا زودها؟ (من نحن)
+              لماذا Zawdha؟ (من نحن)
               {currentView === 'info' && (
                 <motion.span 
                   layoutId="activeHeaderTab"
@@ -155,12 +155,12 @@ export default function Header({
           </motion.div>
           <div className="flex flex-col items-center sm:items-start">
             <motion.span 
-              className="text-2xl sm:text-3xl font-black tracking-tight bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 bg-clip-text text-transparent"
+              className="text-2xl sm:text-3xl font-medium tracking-tight bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 bg-clip-text text-transparent"
               animate={{ backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] }}
               transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
               style={{ backgroundSize: "200% auto" }}
             >
-              زودها ZWDHA
+              Zawdha
             </motion.span>
             <span className="text-[9px] sm:text-[10px] font-bold tracking-widest uppercase text-neutral-400 font-mono">STORE</span>
           </div>
@@ -256,7 +256,7 @@ export default function Header({
                   : "hover:bg-neutral-800/50"
               }`}
             >
-              لماذا زودها؟ (من نحن)
+              لماذا Zawdha؟ (من نحن)
             </motion.button>
           </div>
         </div>

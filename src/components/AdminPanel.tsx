@@ -59,6 +59,7 @@ export default function AdminPanel({ darkMode, currency, onSettingsUpdated }: Ad
   // Coupon Form states
   const [couponCode, setCouponCode] = useState("");
   const [couponPercent, setCouponPercent] = useState("");
+  const [settCouponDiscountStep, setSettCouponDiscountStep] = useState("50");
 
   // General Settings Form states
   const [settRateSar, setSettRateSar] = useState("");
@@ -81,7 +82,11 @@ export default function AdminPanel({ darkMode, currency, onSettingsUpdated }: Ad
   const [settDailyGiftQty, setSettDailyGiftQty] = useState("50");
   const [settDailyGiftPlatform, setSettDailyGiftPlatform] = useState("Instagram");
   const [settDailyGiftActive, setSettDailyGiftActive] = useState(true);
+  const [settDailyGiftCooldownHours, setSettDailyGiftCooldownHours] = useState("24");
+  const [settDailyGiftCooldownMinutes, setSettDailyGiftCooldownMinutes] = useState("0");
+  const [settWhatsappNumber, setSettWhatsappNumber] = useState("01124656914");
   const [newAdminPassword, setNewAdminPassword] = useState("");
+  const [settingsSubTab, setSettingsSubTab] = useState<'whatsapp' | 'rates' | 'payments' | 'gift' | 'smtp' | 'counters' | 'password'>('whatsapp');
 
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
@@ -154,6 +159,10 @@ export default function AdminPanel({ darkMode, currency, onSettingsUpdated }: Ad
         setSettDailyGiftQty(settingsData.daily_gift_qty || "50");
         setSettDailyGiftPlatform(settingsData.daily_gift_platform || "Instagram");
         setSettDailyGiftActive(settingsData.daily_gift_active !== "false");
+        setSettDailyGiftCooldownHours(settingsData.daily_gift_cooldown_hours || "24");
+        setSettDailyGiftCooldownMinutes(settingsData.daily_gift_cooldown_minutes || "0");
+        setSettWhatsappNumber(settingsData.whatsapp_number || "01124656914");
+        setSettCouponDiscountStep(settingsData.coupon_discount_step || "50");
       }
 
       // Get Stats
@@ -487,6 +496,10 @@ export default function AdminPanel({ darkMode, currency, onSettingsUpdated }: Ad
       daily_gift_qty: settDailyGiftQty,
       daily_gift_platform: settDailyGiftPlatform,
       daily_gift_active: settDailyGiftActive.toString(),
+      daily_gift_cooldown_hours: settDailyGiftCooldownHours,
+      daily_gift_cooldown_minutes: settDailyGiftCooldownMinutes,
+      whatsapp_number: settWhatsappNumber,
+      coupon_discount_step: settCouponDiscountStep,
     };
 
     try {
@@ -566,7 +579,7 @@ export default function AdminPanel({ darkMode, currency, onSettingsUpdated }: Ad
   const getWhatsAppLink = (order: Order) => {
     const cleanNumber = order.whatsappNumber.replace(/[^\d]/g, "");
     const text = encodeURIComponent(
-      `السلام عليكم يا أستاذ ${order.customerName}، معك الدعم الفني لمتجر زودها ZWDHA SMM.\n\n` +
+      `السلام عليكم يا أستاذ ${order.customerName}، معك الدعم الفني لمتجر Zawdha.\n\n` +
       `لقد تلقينا طلبك رقم (${order.id.slice(0,8)}) لتزويد الخدمة التالية:\n` +
       `🎁 باقة: ${order.packageName} (${order.platform})\n` +
       `💰 السعر: ${order.price} ${order.currency}\n` +
@@ -579,7 +592,7 @@ export default function AdminPanel({ darkMode, currency, onSettingsUpdated }: Ad
   // Convert Gregorian Date nicely for Arabs
   const formatDate = (isoStr: string) => {
     const date = new Date(isoStr);
-    return date.toLocaleString("ar-EG", {
+    return date.toLocaleString("ar-EG-u-nu-latn", {
       year: "numeric", month: "long", day: "numeric",
       hour: "2-digit", minute: "2-digit"
     });
@@ -598,7 +611,7 @@ export default function AdminPanel({ darkMode, currency, onSettingsUpdated }: Ad
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-purple-600 via-pink-600 to-orange-500 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-purple-900/20">
               <Lock className="w-7 h-7 text-white" />
             </div>
-            <h1 className="text-xl font-black">بوابة إدارة زودها ZWDHA</h1>
+            <h1 className="text-xl font-medium">بوابة إدارة Zawdha</h1>
             <p className="text-xs text-neutral-400 mt-1.5">تسجيل الدخول الآمن لإدارة الطلبات والخدمات</p>
           </div>
 
@@ -1401,7 +1414,7 @@ export default function AdminPanel({ darkMode, currency, onSettingsUpdated }: Ad
                             id="coupon-form-code"
                             type="text"
                             required
-                            placeholder="مثال: ZWDHA10"
+                            placeholder="مثال: ZAWDHA10"
                             value={couponCode}
                             onChange={(e) => setCouponCode(e.target.value)}
                             className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none focus:border-pink-500 uppercase ${
@@ -1433,6 +1446,59 @@ export default function AdminPanel({ darkMode, currency, onSettingsUpdated }: Ad
                           تفعيل الكوبون فوراً
                         </button>
                       </form>
+                    </div>
+
+                    {/* Dynamic Thank You Coupon Step Setting */}
+                    <div className={`p-6 rounded-2xl border ${darkMode ? "bg-neutral-900/40 border-neutral-800" : "bg-neutral-50 border-neutral-200"}`}>
+                      <h3 className="font-bold mb-2 text-sm flex items-center gap-2">
+                        <span>🎁 التحكم في قيمة خصم كبون الشكر التلقائي</span>
+                      </h3>
+                      <p className="text-[10px] text-neutral-400 mb-4">
+                        يتم منح هذا الكوبون للعميل تلقائياً بعد إرسال طلبه كخصم إضافي لعمليته القادمة. القيمة تحسب بضرب ترتيب باقة الخدمة في هذا المعامل (مثال: ترتيب الباقة 1 × 50 جنيه = 50 جنيه خصم، باقة الترتيب الثاني 2 × 50 جنيه = 100 جنيه خصم، إلخ). يمكنك تعديل هذا المعامل أدناه.
+                      </p>
+                      <div className="flex flex-col sm:flex-row gap-4 items-end max-w-xl">
+                        <div className="flex-1 w-full">
+                          <label className="block text-[11px] font-bold text-neutral-400 mb-1">قيمة الخصم لكل درجة/مستوى باقة (EGP)</label>
+                          <input
+                            id="coupon-discount-step-input"
+                            type="number"
+                            required
+                            placeholder="مثال: 50"
+                            value={settCouponDiscountStep}
+                            onChange={(e) => setSettCouponDiscountStep(e.target.value)}
+                            className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none focus:border-pink-500 ${
+                              darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                            }`}
+                          />
+                        </div>
+                        <button
+                          id="coupon-discount-step-save-btn"
+                          type="button"
+                          onClick={async () => {
+                            if (!token) return;
+                            try {
+                              const res = await fetch("/api/settings", {
+                                method: "POST",
+                                headers: {
+                                  "Content-Type": "application/json",
+                                  "Authorization": `Bearer ${token}`
+                                },
+                                body: JSON.stringify({ coupon_discount_step: settCouponDiscountStep })
+                              });
+                              if (res.ok) {
+                                showSuccess("تم حفظ إعداد خصم كبون الشكر بنجاح!");
+                              } else {
+                                showError("فشل حفظ الإعداد");
+                              }
+                            } catch (e) {
+                              showError("حدث خطأ أثناء الاتصال بالخادم");
+                            }
+                          }}
+                          className="w-full sm:w-auto px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-xs hover:opacity-90 active:scale-95 shrink-0 cursor-pointer shadow-md"
+                        >
+                          حفظ التعديل
+                        </button>
+                      </div>
                     </div>
 
                     {/* Coupons list */}
@@ -1481,388 +1547,642 @@ export default function AdminPanel({ darkMode, currency, onSettingsUpdated }: Ad
 
                 {/* 5. SETTINGS TAB */}
                 {activeTab === 'settings' && (
-                  <div className="space-y-8 animate-fade-in">
+                  <div className="space-y-6 animate-fade-in">
                     
-                    {/* General Settings Form */}
-                    <form onSubmit={handleSaveSettings} className="space-y-6">
-                      
-                      {/* Section A: Exchange rates */}
-                      <div className={`p-6 rounded-2xl border ${darkMode ? "bg-neutral-900/30 border-neutral-800" : "bg-neutral-50 border-neutral-200"}`}>
-                        <h3 className="font-bold mb-4 text-xs flex items-center gap-2">
-                          <Landmark className="w-4 h-4 text-pink-500" />
-                          سعر تحويل العملات مقابل الجنيه المصري (1 EGP)
-                        </h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-[11px] font-bold text-neutral-400 mb-1">سعر الريال السعودي مقابل الجنيه</label>
-                            <input
-                              id="settings-input-sar"
-                              type="text"
-                              required
-                              value={settRateSar}
-                              onChange={(e) => setSettRateSar(e.target.value)}
-                              className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none focus:border-pink-500 font-mono ${
-                                darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
-                              }`}
-                            />
-                            <p className="text-[10px] text-neutral-500 mt-1">مثال: 0.08 ريال سعودي لكل جنيه</p>
-                          </div>
-
-                          <div>
-                            <label className="block text-[11px] font-bold text-neutral-400 mb-1">سعر الدولار الأمريكي مقابل الجنيه</label>
-                            <input
-                              id="settings-input-usd"
-                              type="text"
-                              required
-                              value={settRateUsd}
-                              onChange={(e) => setSettRateUsd(e.target.value)}
-                              className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none focus:border-pink-500 font-mono ${
-                                darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
-                              }`}
-                            />
-                            <p className="text-[10px] text-neutral-500 mt-1">مثال: 0.02 دولار أمريكي لكل جنيه</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Section B: Homepage counter settings */}
-                      <div className={`p-6 rounded-2xl border ${darkMode ? "bg-neutral-900/30 border-neutral-800" : "bg-neutral-50 border-neutral-200"}`}>
-                        <h3 className="font-bold mb-4 text-xs flex items-center gap-2">
-                          <TrendingUp className="w-4 h-4 text-pink-500" />
-                          إعدادات عدادات الواجهة الرئيسية (التأثير البصري)
-                        </h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                          <div>
-                            <label className="block text-[11px] font-bold text-neutral-400 mb-1">الطلبات المكتملة</label>
-                            <input
-                              id="settings-input-completed"
-                              type="number"
-                              required
-                              value={settOrdersCount}
-                              onChange={(e) => setSettOrdersCount(e.target.value)}
-                              className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none focus:border-pink-500 font-mono ${
-                                darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
-                              }`}
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-[11px] font-bold text-neutral-400 mb-1">تقييمات العملاء</label>
-                            <input
-                              id="settings-input-reviews"
-                              type="number"
-                              required
-                              value={settReviewsCount}
-                              onChange={(e) => setSettReviewsCount(e.target.value)}
-                              className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none focus:border-pink-500 font-mono ${
-                                darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
-                              }`}
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-[11px] font-bold text-neutral-400 mb-1">التقييم العام للمتجر</label>
-                            <input
-                              id="settings-input-avg"
-                              type="text"
-                              required
-                              value={settAvgRating}
-                              onChange={(e) => setSettAvgRating(e.target.value)}
-                              className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none focus:border-pink-500 font-mono ${
-                                darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
-                              }`}
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Section C: Gmail SMTP setup */}
-                      <div className={`p-6 rounded-2xl border ${darkMode ? "bg-neutral-900/30 border-neutral-800" : "bg-neutral-50 border-neutral-200"}`}>
-                        <h3 className="font-bold mb-4 text-xs flex items-center gap-2">
-                          <Mail className="w-4 h-4 text-pink-500" />
-                          إعدادات نظام الإيميل والتنبيهات (Gmail SMTP API)
-                        </h3>
-                        <p className="text-[10px] text-neutral-400 mb-4">يُستخدم هذا النظام لإرسال إشعارات بريد تلقائية بمجرد تسجيل أي عميل لطلب جديد في المتجر.</p>
-                        
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-[11px] font-bold text-neutral-400 mb-1">SMTP Host</label>
-                            <input
-                              id="settings-input-smtp-host"
-                              type="text"
-                              value={settSmtpHost}
-                              onChange={(e) => setSettSmtpHost(e.target.value)}
-                              className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none font-mono ${
-                                darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
-                              }`}
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-[11px] font-bold text-neutral-400 mb-1">SMTP Port</label>
-                            <input
-                              id="settings-input-smtp-port"
-                              type="text"
-                              value={settSmtpPort}
-                              onChange={(e) => setSettSmtpPort(e.target.value)}
-                              className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none font-mono ${
-                                darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
-                              }`}
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-[11px] font-bold text-neutral-400 mb-1">اسم بريد الإرسال (Gmail)</label>
-                            <input
-                              id="settings-input-smtp-user"
-                              type="email"
-                              placeholder="example@gmail.com"
-                              value={settSmtpUser}
-                              onChange={(e) => setSettSmtpUser(e.target.value)}
-                              className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none font-mono ${
-                                darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
-                              }`}
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-[11px] font-bold text-neutral-400 mb-1">كلمة مرور التطبيقات (App Password)</label>
-                            <input
-                              id="settings-input-smtp-pass"
-                              type="password"
-                              placeholder="أدخل رمز مرور التطبيقات لـ Gmail"
-                              value={settSmtpPass}
-                              onChange={(e) => setSettSmtpPass(e.target.value)}
-                              className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none font-mono ${
-                                darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
-                              }`}
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-[11px] font-bold text-neutral-400 mb-1">بريد استلام الإشعارات (المسؤول)</label>
-                            <input
-                              id="settings-input-smtp-receiver"
-                              type="email"
-                              value={settSmtpReceiver}
-                              onChange={(e) => setSettSmtpReceiver(e.target.value)}
-                              className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none font-mono ${
-                                darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
-                              }`}
-                            />
-                          </div>
-
-                          <div className="flex items-center gap-2 pt-6">
-                            <label className="flex items-center gap-2 text-xs font-bold select-none cursor-pointer">
-                              <input
-                                id="settings-input-smtp-secure"
-                                type="checkbox"
-                                checked={settSmtpSecure}
-                                onChange={(e) => setSettSmtpSecure(e.target.checked)}
-                                className="rounded border-neutral-800 text-pink-500"
-                              />
-                              <span>SSL/TLS Secure connection</span>
-                            </label>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Section D: Store payment accounts */}
-                      <div className={`p-6 rounded-2xl border ${darkMode ? "bg-neutral-900/30 border-neutral-800" : "bg-neutral-50 border-neutral-200"}`}>
-                        <h3 className="font-bold mb-4 text-xs flex items-center gap-2">
-                          <Wallet className="w-4 h-4 text-pink-500" />
-                          أرقام وعناوين استقبال أموال التحويلات (الدفع عبر المتجر)
-                        </h3>
-                        <p className="text-[10px] text-neutral-400 mb-4">هذه هي الأرقام والعناوين التي تظهر للعملاء في واجهة الدفع عند اختيارهم الدفع عبر المتجر.</p>
-                        
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                          <div>
-                            <label className="block text-[11px] font-bold text-neutral-400 mb-1">فودافون كاش (Vodafone Cash)</label>
-                            <input
-                              id="settings-input-vodafone"
-                              type="text"
-                              required
-                              value={settVodafoneCash}
-                              onChange={(e) => setSettVodafoneCash(e.target.value)}
-                              className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none font-mono ${
-                                darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
-                              }`}
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-[11px] font-bold text-neutral-400 mb-1">أورنج كاش (Orange Cash)</label>
-                            <input
-                              id="settings-input-orange"
-                              type="text"
-                              required
-                              value={settOrangeCash}
-                              onChange={(e) => setSettOrangeCash(e.target.value)}
-                              className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none font-mono ${
-                                darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
-                              }`}
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-[11px] font-bold text-neutral-400 mb-1">اتصالات كاش (Etisalat Cash)</label>
-                            <input
-                              id="settings-input-etisalat"
-                              type="text"
-                              required
-                              value={settEtisalatCash}
-                              onChange={(e) => setSettEtisalatCash(e.target.value)}
-                              className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none font-mono ${
-                                darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
-                              }`}
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-[11px] font-bold text-neutral-400 mb-1">WE Pay</label>
-                            <input
-                              id="settings-input-wepay"
-                              type="text"
-                              required
-                              value={settWePay}
-                              onChange={(e) => setSettWePay(e.target.value)}
-                              className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none font-mono ${
-                                darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
-                              }`}
-                            />
-                          </div>
-
-                          <div className="sm:col-span-2">
-                            <label className="block text-[11px] font-bold text-neutral-400 mb-1">إنستا باي (عنوان أو رقم InstaPay)</label>
-                            <input
-                              id="settings-input-instapay"
-                              type="text"
-                              required
-                              value={settInstapay}
-                              onChange={(e) => setSettInstapay(e.target.value)}
-                              className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none font-mono ${
-                                darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
-                              }`}
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Section: Daily Free Gift settings */}
-                      <div className={`p-6 rounded-2xl border ${
-                        darkMode ? "bg-neutral-900/30 border-neutral-800" : "bg-neutral-50 border-neutral-200"
-                      }`}>
-                        <h3 className="font-bold mb-4 text-xs flex items-center gap-2">
-                          <Gift className="w-4 h-4 text-pink-500 animate-pulse" />
-                          إعدادات الهدية اليومية المجانية (تعديل الهدية والمنصة) 🎁
-                        </h3>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                          <div>
-                            <label className="block text-[11px] font-bold text-neutral-400 mb-1">حالة الهدية اليومية</label>
-                            <select
-                              value={settDailyGiftActive ? "true" : "false"}
-                              onChange={(e) => setSettDailyGiftActive(e.target.value === "true")}
-                              className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none ${
-                                darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
-                              }`}
-                            >
-                              <option value="true">مفعلة ومتاحة للزوار</option>
-                              <option value="false">معطلة ومخفية</option>
-                            </select>
-                          </div>
-
-                          <div>
-                            <label className="block text-[11px] font-bold text-neutral-400 mb-1">المنصة المستهدفة</label>
-                            <select
-                              value={settDailyGiftPlatform}
-                              onChange={(e) => setSettDailyGiftPlatform(e.target.value)}
-                              className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none ${
-                                darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
-                              }`}
-                            >
-                              <option value="Instagram">إنستقرام Instagram</option>
-                              <option value="Facebook">فيسبوك Facebook</option>
-                              <option value="YouTube">يوتيوب YouTube</option>
-                              <option value="TikTok">تيك توك TikTok</option>
-                              <option value="Google Reviews">تقييمات جوجل Google</option>
-                            </select>
-                          </div>
-
-                          <div>
-                            <label className="block text-[11px] font-bold text-neutral-400 mb-1">نوع الهدية اليومية</label>
-                            <select
-                              value={settDailyGiftType}
-                              onChange={(e) => setSettDailyGiftType(e.target.value)}
-                              className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none ${
-                                darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
-                              }`}
-                            >
-                              <option value="لايك">لايكات / تفاعلات (Likes)</option>
-                              <option value="متابع">متابعين (Followers)</option>
-                              <option value="مشاهدة">مشاهدات (Views)</option>
-                              <option value="لايك على تعليق">لايكات على تعليق (Comment Likes)</option>
-                            </select>
-                          </div>
-
-                          <div>
-                            <label className="block text-[11px] font-bold text-neutral-400 mb-1">كمية الهدية (العدد)</label>
-                            <input
-                              type="number"
-                              required
-                              min={1}
-                              value={settDailyGiftQty}
-                              onChange={(e) => setSettDailyGiftQty(e.target.value)}
-                              className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none font-mono ${
-                                darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
-                              }`}
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex justify-end gap-3">
-                        <button
-                          id="settings-btn-save"
-                          type="submit"
-                          className="px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-xs hover:opacity-90 active:scale-95 transition-all cursor-pointer shadow-lg shadow-pink-500/10"
-                        >
-                          حفظ الإعدادات بالكامل
-                        </button>
-                      </div>
-
-                    </form>
-
-                    {/* Section D: Credentials adjustment */}
-                    <div className={`p-6 rounded-2xl border ${darkMode ? "bg-neutral-900/30 border-neutral-800" : "bg-neutral-50 border-neutral-200"}`}>
-                      <h3 className="font-bold mb-4 text-xs flex items-center gap-2">
-                        <Key className="w-4 h-4 text-pink-500" />
-                        تغيير كلمة مرور الإدارة لوحة التحكم
-                      </h3>
-                      <div className="flex flex-col sm:flex-row gap-4 items-end">
-                        <div className="flex-1 w-full">
-                          <label className="block text-[11px] font-bold text-neutral-400 mb-1">كلمة المرور الجديدة (6 أحرف على الأقل)</label>
-                          <input
-                            id="settings-input-new-pass"
-                            type="password"
-                            placeholder="أدخل كلمة المرور الجديدة المعززة"
-                            value={newAdminPassword}
-                            onChange={(e) => setNewAdminPassword(e.target.value)}
-                            className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none ${
-                              darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                    {/* Sub-tabs header/selector */}
+                    <div className="flex flex-wrap gap-2 pb-3 border-b border-neutral-800/20">
+                      {[
+                        { id: 'whatsapp', label: 'رقم الواتساب 📱', icon: Phone },
+                        { id: 'rates', label: 'تحويل العملات 💵', icon: Landmark },
+                        { id: 'payments', label: 'طرق استقبال الدفع 💳', icon: Wallet },
+                        { id: 'gift', label: 'الهدية اليومية 🎁', icon: Gift },
+                        { id: 'smtp', label: 'إشعارات البريد ✉️', icon: Mail },
+                        { id: 'counters', label: 'عدادات المتجر 📈', icon: TrendingUp },
+                        { id: 'password', label: 'أمان كلمة المرور 🔐', icon: Key },
+                      ].map((sub) => {
+                        const IconComponent = sub.icon;
+                        const isSelected = settingsSubTab === sub.id;
+                        return (
+                          <button
+                            key={sub.id}
+                            type="button"
+                            onClick={() => setSettingsSubTab(sub.id as any)}
+                            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                              isSelected
+                                ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md shadow-pink-500/15 scale-102"
+                                : darkMode
+                                  ? "bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-850"
+                                  : "bg-white border border-neutral-200 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50"
                             }`}
-                          />
-                        </div>
-                        <button
-                          id="settings-btn-change-pass"
-                          type="button"
-                          onClick={handleChangePassword}
-                          className="w-full sm:w-auto px-5 py-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-bold text-xs transition-all cursor-pointer"
-                        >
-                          تحديث كلمة السر
-                        </button>
-                      </div>
+                          >
+                            <IconComponent className={`w-4 h-4 ${isSelected ? "text-white" : "text-pink-500"}`} />
+                            <span>{sub.label}</span>
+                          </button>
+                        );
+                      })}
                     </div>
+
+                    {/* Sub-tab 1: WhatsApp */}
+                    {settingsSubTab === 'whatsapp' && (
+                      <form onSubmit={handleSaveSettings} className="space-y-6 animate-fade-in">
+                        {/* Section 0: Official WhatsApp Number */}
+                        <div className={`p-6 rounded-2xl border ${darkMode ? "bg-neutral-900/30 border-neutral-800" : "bg-neutral-50 border-neutral-200"}`}>
+                          <h3 className="font-bold mb-4 text-xs flex items-center gap-2">
+                            <Phone className="w-4 h-4 text-green-500 animate-pulse" />
+                            رقم الواتساب الرئيسي للموقع 📱
+                          </h3>
+                          <p className="text-[10px] text-neutral-400 mb-4">هذا الرقم هو الذي يتم تحويل جميع طلبات الشراء، الهدية المجانية، وجميع أزرار تواصل الواتساب إليه تلقائياً عبر الموقع.</p>
+                          <div className="max-w-md">
+                            <label className="block text-[11px] font-bold text-neutral-400 mb-1">رقم الواتساب بالصيغة المصرية الرسمية (مثال: 01124656914)</label>
+                            <input
+                              id="settings-input-whatsapp"
+                              type="text"
+                              required
+                              value={settWhatsappNumber}
+                              onChange={(e) => setSettWhatsappNumber(e.target.value)}
+                              className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none focus:border-green-500 font-mono ${
+                                darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                              }`}
+                              placeholder="01124656914"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end">
+                          <button
+                            id="settings-btn-save-whatsapp"
+                            type="submit"
+                            className="px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-xs hover:opacity-90 active:scale-95 transition-all cursor-pointer shadow-lg shadow-pink-500/10"
+                          >
+                            حفظ رقم الواتساب فوراً
+                          </button>
+                        </div>
+                      </form>
+                    )}
+
+                    {/* Sub-tab 2: Rates */}
+                    {settingsSubTab === 'rates' && (
+                      <form onSubmit={handleSaveSettings} className="space-y-6 animate-fade-in">
+                        {/* Section A: Exchange rates */}
+                        <div className={`p-6 rounded-2xl border ${darkMode ? "bg-neutral-900/30 border-neutral-800" : "bg-neutral-50 border-neutral-200"}`}>
+                          <h3 className="font-bold mb-4 text-xs flex items-center gap-2">
+                            <Landmark className="w-4 h-4 text-pink-500" />
+                            سعر تحويل العملات مقابل الجنيه المصري (1 EGP)
+                          </h3>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-[11px] font-bold text-neutral-400 mb-1">سعر الريال السعودي مقابل الجنيه</label>
+                              <input
+                                id="settings-input-sar"
+                                type="text"
+                                required
+                                value={settRateSar}
+                                onChange={(e) => setSettRateSar(e.target.value)}
+                                className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none focus:border-pink-500 font-mono ${
+                                  darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                                }`}
+                              />
+                              <p className="text-[10px] text-neutral-500 mt-1">مثال: 0.08 ريال سعودي لكل جنيه</p>
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-bold text-neutral-400 mb-1">سعر الدولار الأمريكي مقابل الجنيه</label>
+                              <input
+                                id="settings-input-usd"
+                                type="text"
+                                required
+                                value={settRateUsd}
+                                onChange={(e) => setSettRateUsd(e.target.value)}
+                                className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none focus:border-pink-500 font-mono ${
+                                  darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                                }`}
+                              />
+                              <p className="text-[10px] text-neutral-500 mt-1">مثال: 0.02 دولار أمريكي لكل جنيه</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end">
+                          <button
+                            id="settings-btn-save-rates"
+                            type="submit"
+                            className="px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-xs hover:opacity-90 active:scale-95 transition-all cursor-pointer shadow-lg shadow-pink-500/10"
+                          >
+                            حفظ أسعار التحويل
+                          </button>
+                        </div>
+                      </form>
+                    )}
+
+                    {/* Sub-tab 3: Payments */}
+                    {settingsSubTab === 'payments' && (
+                      <form onSubmit={handleSaveSettings} className="space-y-6 animate-fade-in">
+                        {/* Section D: Store payment accounts */}
+                        <div className={`p-6 rounded-2xl border ${darkMode ? "bg-neutral-900/30 border-neutral-800" : "bg-neutral-50 border-neutral-200"}`}>
+                          <h3 className="font-bold mb-4 text-xs flex items-center gap-2">
+                            <Wallet className="w-4 h-4 text-pink-500" />
+                            أرقام وعناوين استقبال أموال التحويلات (الدفع عبر المتجر)
+                          </h3>
+                          <p className="text-[10px] text-neutral-400 mb-4">هذه هي الأرقام والعناوين التي تظهر للعملاء في واجهة الدفع عند اختيارهم الدفع عبر المتجر.</p>
+                          
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                            <div>
+                              <label className="block text-[11px] font-bold text-neutral-400 mb-1">فودافون كاش (Vodafone Cash)</label>
+                              <input
+                                id="settings-input-vodafone"
+                                type="text"
+                                required
+                                value={settVodafoneCash}
+                                onChange={(e) => setSettVodafoneCash(e.target.value)}
+                                className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none font-mono ${
+                                  darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                                }`}
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-bold text-neutral-400 mb-1">أورنج كاش (Orange Cash)</label>
+                              <input
+                                id="settings-input-orange"
+                                type="text"
+                                required
+                                value={settOrangeCash}
+                                onChange={(e) => setSettOrangeCash(e.target.value)}
+                                className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none font-mono ${
+                                  darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                                }`}
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-bold text-neutral-400 mb-1">اتصالات كاش (Etisalat Cash)</label>
+                              <input
+                                id="settings-input-etisalat"
+                                type="text"
+                                required
+                                value={settEtisalatCash}
+                                onChange={(e) => setSettEtisalatCash(e.target.value)}
+                                className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none font-mono ${
+                                  darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                                }`}
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-bold text-neutral-400 mb-1">WE Pay</label>
+                              <input
+                                id="settings-input-wepay"
+                                type="text"
+                                required
+                                value={settWePay}
+                                onChange={(e) => setSettWePay(e.target.value)}
+                                className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none font-mono ${
+                                  darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                                }`}
+                              />
+                            </div>
+
+                            <div className="sm:col-span-2">
+                              <label className="block text-[11px] font-bold text-neutral-400 mb-1">إنستا باي (عنوان أو رقم InstaPay)</label>
+                              <input
+                                id="settings-input-instapay"
+                                type="text"
+                                required
+                                value={settInstapay}
+                                onChange={(e) => setSettInstapay(e.target.value)}
+                                className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none font-mono ${
+                                  darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                                }`}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end">
+                          <button
+                            id="settings-btn-save-payments"
+                            type="submit"
+                            className="px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-xs hover:opacity-90 active:scale-95 transition-all cursor-pointer shadow-lg shadow-pink-500/10"
+                          >
+                            حفظ حسابات استقبال الدفع
+                          </button>
+                        </div>
+                      </form>
+                    )}
+
+                    {/* Sub-tab 4: Daily Gift */}
+                    {settingsSubTab === 'gift' && (
+                      <form onSubmit={handleSaveSettings} className="space-y-6 animate-fade-in">
+                        {/* Section: Daily Free Gift settings */}
+                        <div className={`p-6 rounded-2xl border ${
+                          darkMode ? "bg-neutral-900/30 border-neutral-800" : "bg-neutral-50 border-neutral-200"
+                        }`}>
+                          <h3 className="font-bold mb-4 text-xs flex items-center gap-2">
+                            <Gift className="w-4 h-4 text-pink-500 animate-pulse" />
+                            إعدادات الهدية اليومية المجانية (تعديل الهدية والمنصة) 🎁
+                          </h3>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                            <div>
+                              <label className="block text-[11px] font-bold text-neutral-400 mb-1">حالة الهدية اليومية</label>
+                              <select
+                                value={settDailyGiftActive ? "true" : "false"}
+                                onChange={(e) => setSettDailyGiftActive(e.target.value === "true")}
+                                className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none ${
+                                  darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                                }`}
+                              >
+                                <option value="true">مفعلة ومتاحة للزوار</option>
+                                <option value="false">معطلة وغير متاحة مؤقتاً</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-bold text-neutral-400 mb-1">المنصة المستهدفة</label>
+                              <select
+                                value={settDailyGiftPlatform}
+                                onChange={(e) => setSettDailyGiftPlatform(e.target.value)}
+                                className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none ${
+                                  darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                                }`}
+                              >
+                                <option value="Instagram">إنستقرام Instagram</option>
+                                <option value="Facebook">فيسبوك Facebook</option>
+                                <option value="YouTube">يوتيوب YouTube</option>
+                                <option value="TikTok">تيك توك TikTok</option>
+                                <option value="Google Reviews">تقييمات جوجل Google</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-bold text-neutral-400 mb-1">نوع الهدية اليومية</label>
+                              <select
+                                value={settDailyGiftType}
+                                onChange={(e) => setSettDailyGiftType(e.target.value)}
+                                className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none ${
+                                  darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                                }`}
+                              >
+                                <option value="لايك">لايكات / تفاعلات (Likes)</option>
+                                <option value="متابع">متابعين (Followers)</option>
+                                <option value="مشاهدة">مشاهدات (Views)</option>
+                                <option value="لايك على تعليق">لايكات على تعليق (Comment Likes)</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-bold text-neutral-400 mb-1">كمية الهدية (العدد)</label>
+                              <input
+                                type="number"
+                                required
+                                min={1}
+                                value={settDailyGiftQty}
+                                onChange={(e) => setSettDailyGiftQty(e.target.value)}
+                                className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none font-mono ${
+                                  darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                                }`}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Cooldown duration controls */}
+                          <div className="mt-6 pt-6 border-t border-neutral-800/20">
+                            <label className="block text-xs font-bold text-neutral-300 mb-3 text-right">
+                              ⏳ تحديد مدة الانتظار قبل إمكانية طلب الهدية مرة أخرى (فترة التبريد)
+                            </label>
+                            <div className="flex flex-wrap items-center gap-6 justify-start">
+                              
+                              {/* Hours Control */}
+                              <div className="flex flex-col gap-1.5 min-w-[150px]">
+                                <span className="text-[10px] text-neutral-400 font-bold text-right">الساعات (Hours)</span>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => setSettDailyGiftCooldownHours(prev => String(Math.max(0, parseInt(prev || "0") - 1)))}
+                                    className={`p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                                      darkMode ? "bg-neutral-950 border-neutral-800 hover:bg-neutral-900 text-neutral-300" : "bg-white border-neutral-200 hover:bg-neutral-50 text-neutral-700"
+                                    }`}
+                                  >
+                                    -
+                                  </button>
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    value={settDailyGiftCooldownHours}
+                                    onChange={(e) => setSettDailyGiftCooldownHours(e.target.value)}
+                                    className={`w-16 text-center text-xs p-2 rounded-xl border font-mono focus:outline-none ${
+                                      darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                                    }`}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => setSettDailyGiftCooldownHours(prev => String(parseInt(prev || "0") + 1))}
+                                    className={`p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                                      darkMode ? "bg-neutral-950 border-neutral-800 hover:bg-neutral-900 text-neutral-300" : "bg-white border-neutral-200 hover:bg-neutral-50 text-neutral-700"
+                                    }`}
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Minutes Control */}
+                              <div className="flex flex-col gap-1.5 min-w-[150px]">
+                                <span className="text-[10px] text-neutral-400 font-bold text-right">الدقائق (Minutes)</span>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => setSettDailyGiftCooldownMinutes(prev => String(Math.max(0, parseInt(prev || "0") - 5)))}
+                                    className={`p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                                      darkMode ? "bg-neutral-950 border-neutral-800 hover:bg-neutral-900 text-neutral-300" : "bg-white border-neutral-200 hover:bg-neutral-50 text-neutral-700"
+                                    }`}
+                                  >
+                                    -5
+                                  </button>
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={59}
+                                    value={settDailyGiftCooldownMinutes}
+                                    onChange={(e) => {
+                                      const val = Math.min(59, Math.max(0, parseInt(e.target.value || "0")));
+                                      setSettDailyGiftCooldownMinutes(String(val));
+                                    }}
+                                    className={`w-16 text-center text-xs p-2 rounded-xl border font-mono focus:outline-none ${
+                                      darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                                    }`}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => setSettDailyGiftCooldownMinutes(prev => String(Math.min(59, parseInt(prev || "0") + 5)))}
+                                    className={`p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                                      darkMode ? "bg-neutral-950 border-neutral-800 hover:bg-neutral-900 text-neutral-300" : "bg-white border-neutral-200 hover:bg-neutral-50 text-neutral-700"
+                                    }`}
+                                  >
+                                    +5
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Custom Quick Presets */}
+                              <div className="flex flex-col gap-1.5">
+                                <span className="text-[10px] text-neutral-400 font-bold text-right">اختصارات سريعة:</span>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  {[
+                                    { label: "5 دقائق", h: "0", m: "5" },
+                                    { label: "ساعة واحدة", h: "1", m: "0" },
+                                    { label: "12 ساعة", h: "12", m: "0" },
+                                    { label: "24 ساعة", h: "24", m: "0" },
+                                  ].map((preset) => (
+                                    <button
+                                      key={preset.label}
+                                      type="button"
+                                      onClick={() => {
+                                        setSettDailyGiftCooldownHours(preset.h);
+                                        setSettDailyGiftCooldownMinutes(preset.m);
+                                      }}
+                                      className={`px-3 py-1.5 rounded-lg text-[10px] font-extrabold border transition-all cursor-pointer ${
+                                        settDailyGiftCooldownHours === preset.h && settDailyGiftCooldownMinutes === preset.m
+                                          ? "bg-pink-500/15 border-pink-500/40 text-pink-500"
+                                          : darkMode
+                                            ? "bg-neutral-950 border-neutral-800 hover:bg-neutral-900 text-neutral-400"
+                                            : "bg-white border-neutral-200 hover:bg-neutral-50 text-neutral-600"
+                                      }`}
+                                    >
+                                      {preset.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+
+                            </div>
+                            
+                            {/* Quick preview/explanation sentence in Arabic */}
+                            <p className="text-[10px] text-neutral-500 mt-3.5 leading-relaxed text-right">
+                              ℹ️ سيتمكن الزائر من استلام الهدية مرة واحدة كل <strong className="text-pink-500 font-black">{settDailyGiftCooldownHours} ساعة</strong> و <strong className="text-pink-500 font-black">{settDailyGiftCooldownMinutes} دقيقة</strong> من نفس الهاتف أو المتصفح.
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end">
+                          <button
+                            id="settings-btn-save-gift"
+                            type="submit"
+                            className="px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-xs hover:opacity-90 active:scale-95 transition-all cursor-pointer shadow-lg shadow-pink-500/10"
+                          >
+                            حفظ إعدادات الهدية والانتظار
+                          </button>
+                        </div>
+                      </form>
+                    )}
+
+                    {/* Sub-tab 5: SMTP */}
+                    {settingsSubTab === 'smtp' && (
+                      <form onSubmit={handleSaveSettings} className="space-y-6 animate-fade-in">
+                        {/* Section C: Gmail SMTP setup */}
+                        <div className={`p-6 rounded-2xl border ${darkMode ? "bg-neutral-900/30 border-neutral-800" : "bg-neutral-50 border-neutral-200"}`}>
+                          <h3 className="font-bold mb-4 text-xs flex items-center gap-2">
+                            <Mail className="w-4 h-4 text-pink-500" />
+                            إعدادات نظام الإيميل والتنبيهات (Gmail SMTP API)
+                          </h3>
+                          <p className="text-[10px] text-neutral-400 mb-4">يُستخدم هذا النظام لإرسال إشعارات بريد تلقائية بمجرد تسجيل أي عميل لطلب جديد في المتجر.</p>
+                          
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-[11px] font-bold text-neutral-400 mb-1">SMTP Host</label>
+                              <input
+                                id="settings-input-smtp-host"
+                                type="text"
+                                value={settSmtpHost}
+                                onChange={(e) => setSettSmtpHost(e.target.value)}
+                                className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none font-mono ${
+                                  darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                                }`}
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-bold text-neutral-400 mb-1">SMTP Port</label>
+                              <input
+                                id="settings-input-smtp-port"
+                                type="text"
+                                value={settSmtpPort}
+                                onChange={(e) => setSettSmtpPort(e.target.value)}
+                                className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none font-mono ${
+                                  darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                                }`}
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-bold text-neutral-400 mb-1">اسم بريد الإرسال (Gmail)</label>
+                              <input
+                                id="settings-input-smtp-user"
+                                type="email"
+                                placeholder="example@gmail.com"
+                                value={settSmtpUser}
+                                onChange={(e) => setSettSmtpUser(e.target.value)}
+                                className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none font-mono ${
+                                  darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                                }`}
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-bold text-neutral-400 mb-1">كلمة مرور التطبيقات (App Password)</label>
+                              <input
+                                id="settings-input-smtp-pass"
+                                type="password"
+                                placeholder="أدخل رمز مرور التطبيقات لـ Gmail"
+                                value={settSmtpPass}
+                                onChange={(e) => setSettSmtpPass(e.target.value)}
+                                className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none font-mono ${
+                                  darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                                }`}
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-bold text-neutral-400 mb-1">بريد استلام الإشعارات (المسؤول)</label>
+                              <input
+                                id="settings-input-smtp-receiver"
+                                type="email"
+                                value={settSmtpReceiver}
+                                onChange={(e) => setSettSmtpReceiver(e.target.value)}
+                                className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none font-mono ${
+                                  darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                                }`}
+                              />
+                            </div>
+
+                            <div className="flex items-center gap-2 pt-6">
+                              <label className="flex items-center gap-2 text-xs font-bold select-none cursor-pointer">
+                                <input
+                                  id="settings-input-smtp-secure"
+                                  type="checkbox"
+                                  checked={settSmtpSecure}
+                                  onChange={(e) => setSettSmtpSecure(e.target.checked)}
+                                  className="rounded border-neutral-800 text-pink-500"
+                                />
+                                <span>SSL/TLS Secure connection</span>
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end">
+                          <button
+                            id="settings-btn-save-smtp"
+                            type="submit"
+                            className="px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-xs hover:opacity-90 active:scale-95 transition-all cursor-pointer shadow-lg shadow-pink-500/10"
+                          >
+                            حفظ إعدادات البريد SMTP
+                          </button>
+                        </div>
+                      </form>
+                    )}
+
+                    {/* Sub-tab 6: Counters */}
+                    {settingsSubTab === 'counters' && (
+                      <form onSubmit={handleSaveSettings} className="space-y-6 animate-fade-in">
+                        {/* Section B: Homepage counter settings */}
+                        <div className={`p-6 rounded-2xl border ${darkMode ? "bg-neutral-900/30 border-neutral-800" : "bg-neutral-50 border-neutral-200"}`}>
+                          <h3 className="font-bold mb-4 text-xs flex items-center gap-2">
+                            <TrendingUp className="w-4 h-4 text-pink-500" />
+                            إعدادات عدادات الواجهة الرئيسية (التأثير البصري)
+                          </h3>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div>
+                              <label className="block text-[11px] font-bold text-neutral-400 mb-1">الطلبات المكتملة</label>
+                              <input
+                                id="settings-input-completed"
+                                type="number"
+                                required
+                                value={settOrdersCount}
+                                onChange={(e) => setSettOrdersCount(e.target.value)}
+                                className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none focus:border-pink-500 font-mono ${
+                                  darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                                }`}
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-bold text-neutral-400 mb-1">تقييمات العملاء</label>
+                              <input
+                                id="settings-input-reviews"
+                                type="number"
+                                required
+                                value={settReviewsCount}
+                                onChange={(e) => setSettReviewsCount(e.target.value)}
+                                className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none focus:border-pink-500 font-mono ${
+                                  darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                                }`}
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-bold text-neutral-400 mb-1">التقييم العام للمتجر</label>
+                              <input
+                                id="settings-input-avg"
+                                type="text"
+                                required
+                                value={settAvgRating}
+                                onChange={(e) => setSettAvgRating(e.target.value)}
+                                className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none focus:border-pink-500 font-mono ${
+                                  darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                                }`}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end">
+                          <button
+                            id="settings-btn-save-counters"
+                            type="submit"
+                            className="px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-xs hover:opacity-90 active:scale-95 transition-all cursor-pointer shadow-lg shadow-pink-500/10"
+                          >
+                            حفظ عدادات الواجهة
+                          </button>
+                        </div>
+                      </form>
+                    )}
+
+                    {/* Sub-tab 7: Password */}
+                    {settingsSubTab === 'password' && (
+                      <div className="space-y-6 animate-fade-in">
+                        {/* Section D: Credentials adjustment */}
+                        <div className={`p-6 rounded-2xl border ${darkMode ? "bg-neutral-900/30 border-neutral-800" : "bg-neutral-50 border-neutral-200"}`}>
+                          <h3 className="font-bold mb-4 text-xs flex items-center gap-2">
+                            <Key className="w-4 h-4 text-pink-500" />
+                            تغيير كلمة مرور الإدارة لوحة التحكم
+                          </h3>
+                          <div className="flex flex-col sm:flex-row gap-4 items-end">
+                            <div className="flex-1 w-full">
+                              <label className="block text-[11px] font-bold text-neutral-400 mb-1">كلمة المرور الجديدة (6 أحرف على الأقل)</label>
+                              <input
+                                id="settings-input-new-pass"
+                                type="password"
+                                placeholder="أدخل كلمة المرور الجديدة المعززة"
+                                value={newAdminPassword}
+                                onChange={(e) => setNewAdminPassword(e.target.value)}
+                                className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none ${
+                                  darkMode ? "bg-neutral-950 border-neutral-800 text-white" : "bg-white border-neutral-200 text-neutral-900"
+                                }`}
+                              />
+                            </div>
+                            <button
+                              id="settings-btn-change-pass"
+                              type="button"
+                              onClick={handleChangePassword}
+                              className="w-full sm:w-auto px-5 py-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-bold text-xs transition-all cursor-pointer"
+                            >
+                              تحديث كلمة السر
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                   </div>
                 )}

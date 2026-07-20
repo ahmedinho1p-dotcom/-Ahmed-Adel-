@@ -123,13 +123,13 @@ export default function ReviewSection({ reviews, onAddReview, darkMode }: Review
                 )}
 
                 <div>
-                  <label className="block text-xs font-bold text-neutral-400 mb-1.5 text-right">اسمك الكريم أو اسم مشروعك</label>
+                  <label className="block text-xs font-bold text-neutral-400 mb-1.5 text-right">الاسم بالكامل</label>
                   <input
                     id="review-input-name"
                     type="text"
                     required
                     maxLength={50}
-                    placeholder="مثال: أحمد علي (مسوق إلكتروني)"
+                    placeholder="مثال: أحمد علي"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className={`w-full text-sm p-3 rounded-xl border focus:outline-none transition-all ${

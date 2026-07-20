@@ -1,8 +1,12 @@
 import { MessageCircle, Instagram } from "lucide-react";
 
-export default function FloatingButtons() {
-  const whatsappNumber = "01558676497";
-  const formattedWhatsappNumber = "201558676497"; // standard Egyptian international format for direct chat link
+interface FloatingButtonsProps {
+  whatsappNumber?: string;
+}
+
+export default function FloatingButtons({ whatsappNumber = "01124656914" }: FloatingButtonsProps) {
+  const cleanPhone = whatsappNumber.trim();
+  const formattedWhatsappNumber = cleanPhone.startsWith("0") && cleanPhone.length === 11 ? "2" + cleanPhone : cleanPhone;
   const instagramUrl = "https://www.instagram.com/zwdha.eg?igsh=dHU4bWExeGdvZmE0&utm_source=qr";
 
   return (

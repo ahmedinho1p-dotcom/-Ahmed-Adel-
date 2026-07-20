@@ -62,6 +62,9 @@ export interface StoreSettings {
   etisalat_cash_number?: string;
   we_pay_number?: string;
   instapay_number?: string;
+  daily_gift_cooldown_hours?: string;
+  daily_gift_cooldown_minutes?: string;
+  whatsapp_number?: string;
 }
 
 export interface Review {

@@ -310,12 +310,25 @@ app.post(
 
       // Check Coupon
       let finalPrice = basePrice;
+      let appliedCouponId = null;
       if (couponCode) {
         const coupon = await prisma.coupon.findFirst({
-          where: { code: couponCode.toUpperCase().trim(), active: true },
+          where: { code: couponCode.toUpperCase().trim() },
         });
-        if (coupon) {
-          finalPrice = basePrice * (1 - coupon.discountPercent / 100);
+        if (coupon && coupon.active) {
+          const isExpired = coupon.expiresAt && new Date() > coupon.expiresAt;
+          const isMaxed = coupon.maxUses !== null && coupon.useCount >= coupon.maxUses;
+          
+          if (!isExpired && !isMaxed) {
+            appliedCouponId = coupon.id;
+            let discountAmount = 0;
+            if (coupon.discountType === "FIXED") {
+              discountAmount = coupon.discountValue;
+            } else {
+              discountAmount = basePrice * (coupon.discountPercent / 100);
+            }
+            finalPrice = Math.max(0, basePrice - discountAmount);
+          }
         }
       }
 
@@ -364,6 +377,22 @@ app.post(
         },
       });
 
+      // Update coupon use count if one was applied
+      if (appliedCouponId) {
+        const couponToUpdate = await prisma.coupon.findUnique({ where: { id: appliedCouponId } });
+        if (couponToUpdate) {
+          const nextUseCount = couponToUpdate.useCount + 1;
+          const stillActive = couponToUpdate.maxUses !== null && nextUseCount >= couponToUpdate.maxUses ? false : couponToUpdate.active;
+          await prisma.coupon.update({
+            where: { id: appliedCouponId },
+            data: {
+              useCount: nextUseCount,
+              active: stillActive
+            }
+          });
+        }
+      }
+
       // Create Initial Order History
       await prisma.orderHistory.create({
         data: {
@@ -394,6 +423,51 @@ app.post(
         });
       }
 
+      // Dynamic unique coupon generation for this customer's NEXT purchase
+      // Get all packages of same platform (sorted by sortOrder)
+      const platformPackages = await prisma.package.findMany({
+        where: { platform: pack.platform, isHidden: false },
+        orderBy: { sortOrder: "asc" }
+      });
+
+      // Find current package rank index
+      const packageIndex = platformPackages.findIndex(p => p.id === pack.id);
+      const tierIndex = packageIndex !== -1 ? packageIndex + 1 : 1;
+
+      // Fetch dynamic step discount from store settings (defaults to 50)
+      const couponStepSetting = await prisma.setting.findUnique({ where: { key: "coupon_discount_step" } });
+      const couponStepAmount = couponStepSetting ? parseFloat(couponStepSetting.value) || 50 : 50;
+      const couponValue = tierIndex * couponStepAmount; // Dynamic EGP per grade level
+
+      // Generate a highly secure unique code
+      const generateUniqueCode = () => {
+        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        let resCode = "";
+        for (let i = 0; i < 6; i++) {
+          resCode += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return `ZWDHA-${resCode}`;
+      };
+
+      let uniqueCouponCode = generateUniqueCode();
+      let exists = await prisma.coupon.findUnique({ where: { code: uniqueCouponCode } });
+      while (exists) {
+        uniqueCouponCode = generateUniqueCode();
+        exists = await prisma.coupon.findUnique({ where: { code: uniqueCouponCode } });
+      }
+
+      const generatedCoupon = await prisma.coupon.create({
+        data: {
+          code: uniqueCouponCode,
+          discountType: "FIXED",
+          discountValue: couponValue,
+          discountPercent: 0,
+          maxUses: 1,
+          active: true,
+          expiresAt: null // Stay forever active until they use it once
+        }
+      });
+
       // Trigger Email Notification (Non-blocking)
       sendOrderEmail(newOrder, pack);
 
@@ -405,6 +479,7 @@ app.post(
         success: true,
         message: responseMessage,
         order: newOrder,
+        generatedCoupon,
       });
     } catch (error) {
       console.error(error);
@@ -421,16 +496,30 @@ app.post("/api/coupons/validate", async (req, res) => {
       return res.status(400).json({ error: "يرجى إدخال كود الخصم" });
     }
     const coupon = await prisma.coupon.findFirst({
-      where: { code: code.toUpperCase().trim(), active: true },
+      where: { code: code.toUpperCase().trim() },
     });
 
     if (!coupon) {
-      return res.status(404).json({ error: "كود الخصم غير موجود أو منتهي الصلاحية" });
+      return res.status(404).json({ error: "كود الخصم غير موجود" });
+    }
+
+    if (!coupon.active) {
+      return res.status(400).json({ error: "عذراً، هذا الكوبون غير نشط حالياً" });
+    }
+
+    if (coupon.expiresAt && new Date() > coupon.expiresAt) {
+      return res.status(400).json({ error: "عذراً، هذا الكوبون منتهي الصلاحية" });
+    }
+
+    if (coupon.maxUses !== null && coupon.useCount >= coupon.maxUses) {
+      return res.status(400).json({ error: "عذراً، تم استخدام هذا الكوبون لعدد المرات الأقصى المسموح به" });
     }
 
     res.json({
       valid: true,
       code: coupon.code,
+      discountType: coupon.discountType,
+      discountValue: coupon.discountValue,
       discountPercent: coupon.discountPercent,
     });
   } catch (error) {
@@ -464,14 +553,10 @@ app.get("/api/daily-gift/status", async (req, res) => {
       active: giftActive
     };
 
-    // Find latest claim by this IP in the last 24 hours
-    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    // Find latest claim by this IP
     const lastClaim = await prisma.giftClaim.findFirst({
       where: {
-        ip: ip,
-        createdAt: {
-          gte: oneDayAgo
-        }
+        ip: ip
       },
       orderBy: {
         createdAt: "desc"
@@ -479,15 +564,21 @@ app.get("/api/daily-gift/status", async (req, res) => {
     });
 
     if (lastClaim) {
+      const cooldownHours = parseInt(settings.daily_gift_cooldown_hours || "24");
+      const cooldownMinutes = parseInt(settings.daily_gift_cooldown_minutes || "0");
+      const cooldownMs = ((cooldownHours * 60) + cooldownMinutes) * 60 * 1000;
       const elapsed = Date.now() - lastClaim.createdAt.getTime();
-      const timeLeftMs = (24 * 60 * 60 * 1000) - elapsed;
-      const timeLeftSeconds = Math.max(0, Math.ceil(timeLeftMs / 1000));
-      return res.json({
-        canClaim: false,
-        timeLeftSeconds,
-        giftConfig,
-        lastClaim
-      });
+
+      if (elapsed < cooldownMs) {
+        const timeLeftMs = cooldownMs - elapsed;
+        const timeLeftSeconds = Math.max(0, Math.ceil(timeLeftMs / 1000));
+        return res.json({
+          canClaim: false,
+          timeLeftSeconds,
+          giftConfig,
+          lastClaim
+        });
+      }
     }
 
     res.json({
@@ -526,14 +617,10 @@ app.post("/api/daily-gift/claim", async (req, res) => {
     const giftQty = parseInt(settings.daily_gift_qty || "50");
     const giftPlatform = settings.daily_gift_platform || "Instagram";
 
-    // Double check 24h claiming window
-    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    // Double check claiming window
     const lastClaim = await prisma.giftClaim.findFirst({
       where: {
-        ip: ip,
-        createdAt: {
-          gte: oneDayAgo
-        }
+        ip: ip
       },
       orderBy: {
         createdAt: "desc"
@@ -541,13 +628,19 @@ app.post("/api/daily-gift/claim", async (req, res) => {
     });
 
     if (lastClaim) {
+      const cooldownHours = parseInt(settings.daily_gift_cooldown_hours || "24");
+      const cooldownMinutes = parseInt(settings.daily_gift_cooldown_minutes || "0");
+      const cooldownMs = ((cooldownHours * 60) + cooldownMinutes) * 60 * 1000;
       const elapsed = Date.now() - lastClaim.createdAt.getTime();
-      const timeLeftMs = (24 * 60 * 60 * 1000) - elapsed;
-      const timeLeftSeconds = Math.max(0, Math.ceil(timeLeftMs / 1000));
-      return res.status(400).json({
-        error: "عذراً، لقد قمت باستلام هديتك اليومية بالفعل من هذا الجهاز",
-        timeLeftSeconds
-      });
+
+      if (elapsed < cooldownMs) {
+        const timeLeftMs = cooldownMs - elapsed;
+        const timeLeftSeconds = Math.max(0, Math.ceil(timeLeftMs / 1000));
+        return res.status(400).json({
+          error: "عذراً، لقد قمت باستلام الهدية المجانية بالفعل! يرجى الانتظار حتى انتهاء المدة المحددة.",
+          timeLeftSeconds
+        });
+      }
     }
 
     // Create a new claim
@@ -1238,6 +1331,9 @@ async function initializeApp() {
     { key: "daily_gift_qty", value: "50" },
     { key: "daily_gift_platform", value: "Instagram" },
     { key: "daily_gift_active", value: "true" },
+    { key: "daily_gift_cooldown_hours", value: "24" },
+    { key: "daily_gift_cooldown_minutes", value: "0" },
+    { key: "whatsapp_number", value: "01124656914" },
   ];
 
   for (const setting of defaultSettings) {
@@ -1509,22 +1605,22 @@ async function initializeApp() {
   if (reviewCount === 0) {
     const defaultReviews = [
       {
-        customerName: "أحمد مجدي (صاحب متجر ملابس)",
+        customerName: "أحمد مجدي",
         rating: 5,
         content: "الخدمة سريعة جداً وممتازة، طلبت 5000 متابع ووصلوا في أقل من 6 ساعات وبدون أي نقصان. خدمة العملاء على الواتساب قمة في الاحترام والدعم الفني متواجد على مدار الساعة.",
       },
       {
-        customerName: "منى السيد (مصممة ديكور)",
+        customerName: "منى السيد",
         rating: 5,
         content: "جربت تقييمات جوجل ماب لشركتي والنتيجة كانت رائعة، الترتيب ارتفع والتقييمات كلها من حسابات حقيقية وبتعليقات ممتازة. شكراً زودها وسرعتهم خرافية!",
       },
       {
-        customerName: "كريم الدالي (يوتيوبر)",
+        customerName: "كريم الدالي",
         rating: 5,
         content: "يوتيوب كنت خايف جداً من النقصان وقناتي تتقفل بس المشتركين ثابتين وفعلت الربح بفضل الله ثم موقع زودها. الأسعار مقارنة بالسوق تعتبر الأفضل والأكثر أماناً بلا منازع.",
       },
       {
-        customerName: "ياسمين عمرو (خبيرة تجميل)",
+        customerName: "ياسمين عمرو",
         rating: 5,
         content: "المصداقية هي أهم حاجة، زودها ملتزمين بالوقت والخدمة ممتازة والدعم الفني بيرد بسرعة كبيرة. هتعامل معاهم دايماً في كل شغلي على السوشيال ميديا.",
       },
@@ -1533,6 +1629,24 @@ async function initializeApp() {
     for (const rev of defaultReviews) {
       await prisma.review.create({ data: rev });
     }
+  } else {
+    // Clean up any existing reviews in the database that still have parenthetical titles
+    await prisma.review.updateMany({
+      where: { customerName: "أحمد مجدي (صاحب متجر ملابس)" },
+      data: { customerName: "أحمد مجدي" }
+    });
+    await prisma.review.updateMany({
+      where: { customerName: "منى السيد (مصممة ديكور)" },
+      data: { customerName: "منى السيد" }
+    });
+    await prisma.review.updateMany({
+      where: { customerName: "كريم الدالي (يوتيوبر)" },
+      data: { customerName: "كريم الدالي" }
+    });
+    await prisma.review.updateMany({
+      where: { customerName: "ياسمين عمرو (خبيرة تجميل)" },
+      data: { customerName: "ياسمين عمرو" }
+    });
   }
 
   // Seed default Coupons if empty

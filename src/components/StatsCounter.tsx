@@ -52,7 +52,7 @@ function AnimatedNumber({
     };
   }, [value, duration, trigger]);
 
-  return <span>{formatter ? formatter(current) : current.toLocaleString('ar-EG')}</span>;
+  return <span>{formatter ? formatter(current) : current.toLocaleString('en-US')}</span>;
 }
 
 export default function StatsCounter({
@@ -158,7 +158,7 @@ export default function StatsCounter({
             </div>
             <div className="font-mono text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-yellow-500 flex items-center justify-center gap-1.5">
               <span>4.9</span>
-              <span className="text-lg md:text-xl text-neutral-450">/ ٥.٠</span>
+              <span className="text-lg md:text-xl text-neutral-450">/ 5.0</span>
             </div>
 
             {/* 5-star rating with the last star 80% filled */}

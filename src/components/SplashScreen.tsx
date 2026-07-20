@@ -4,19 +4,20 @@ import { Sparkles } from "lucide-react";
 
 interface SplashScreenProps {
   onComplete: () => void;
+  duration?: number;
 }
 
-export default function SplashScreen({ onComplete }: SplashScreenProps) {
+export default function SplashScreen({ onComplete, duration = 2000 }: SplashScreenProps) {
   const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
-    // Show splash for 2 seconds, then trigger exit
+    // Show splash for custom duration (default 2s), then trigger exit
     const timer = setTimeout(() => {
       setIsVisible(false);
-    }, 2000);
+    }, duration);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [duration]);
 
   return (
     <AnimatePresence onExitComplete={onComplete}>
@@ -109,13 +110,13 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
             {/* Main Brand Typography with 3D shadow depth */}
             <div className="text-center relative select-none">
               <motion.h1 
-                className="text-3xl sm:text-5xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-amber-400 filter drop-shadow-[0_10px_10px_rgba(0,0,0,0.8)]"
+                className="text-3xl sm:text-5xl font-medium tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-amber-400 filter drop-shadow-[0_10px_10px_rgba(0,0,0,0.8)]"
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3, duration: 0.6, ease: "easeOut" }}
                 style={{ transformStyle: "preserve-3d" }}
               >
-                زودها ZWDHA
+                Zawdha
               </motion.h1>
 
               <motion.div
@@ -138,7 +139,7 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
 
           {/* Interactive touch tilt simulation (Mouse follow effect can be heavy, but custom CSS 3D style completes the look) */}
           <div className="absolute bottom-10 left-1/2 -translate-x-1/2 text-[10px] text-neutral-600 font-mono tracking-widest uppercase">
-            ZWDHA PREMIUM SMM • LOADING EXPERIENCE
+            ZAWDHA PREMIUM • LOADING EXPERIENCE
           </div>
         </motion.div>
       )}

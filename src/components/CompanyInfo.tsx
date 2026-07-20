@@ -5,11 +5,14 @@ import { motion, AnimatePresence } from "motion/react";
 
 interface CompanyInfoProps {
   darkMode: boolean;
+  whatsappNumber?: string;
 }
 
-export default function CompanyInfo({ darkMode }: CompanyInfoProps) {
+export default function CompanyInfo({ darkMode, whatsappNumber = "01124656914" }: CompanyInfoProps) {
   // FAQ accordion state
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
+  const cleanPhone = whatsappNumber.trim();
+  const waFormat = cleanPhone.startsWith("0") && cleanPhone.length === 11 ? "2" + cleanPhone : cleanPhone;
 
   const toggleFaq = (index: number) => {
     setOpenFaqIndex(openFaqIndex === index ? null : index);
@@ -17,12 +20,12 @@ export default function CompanyInfo({ darkMode }: CompanyInfoProps) {
 
   const faqs = [
     {
-      question: "هل خدمات التزويد من زودها آمنة على حساباتي؟",
-      answer: "نعم، آمنة بنسبة 100%. نعتمد في زودها على استراتيجيات وطرق تزويد متطابقة تماماً مع خوارزميات وسياسات منصات التواصل الاجتماعي المختلفة. لا نطلب أبداً كلمات مرور لحساباتك الشخصية، وبالتالي لا يوجد أي احتمال لتعرض حسابك للحظر أو الإغلاق.",
+      question: "هل خدمات التزويد من Zawdha آمنة على حساباتي؟",
+      answer: "نعم، آمنة بنسبة 100%. نعتمد في Zawdha على استراتيجيات وطرق تزويد متطابقة تماماً مع خوارزميات وسياسات منصات التواصل الاجتماعي المختلفة. لا نطلب أبداً كلمات مرور لحساباتك الشخصية، وبالتالي لا يوجد أي احتمال لتعرض حسابك للحظر أو الإغلاق.",
     },
     {
       question: "ما هي سياسة التعويض مدى الحياة للخدمات؟",
-      answer: "في زودها، نتميز بتقديم ضمان تعويض مدى الحياة على معظم خدماتنا المميزة. في حال حدوث أي نقص طفيف أو تراجع في الأرقام لأي سبب، يمكنك التواصل معنا فوراً عبر الواتساب وسنقوم بإعادة تزويد حسابك مجاناً وبدون أي تكاليف إضافية.",
+      answer: "في Zawdha، نتميز بتقديم ضمان تعويض مدى الحياة على معظم خدماتنا المميزة. في حال حدوث أي نقص طفيف أو تراجع في الأرقام لأي سبب، يمكنك التواصل معنا فوراً عبر الواتساب وسنقوم بإعادة تزويد حسابك مجاناً وبدون أي تكاليف إضافية.",
     },
     {
       question: "ما هي مدة تسليم الخدمة بعد الطلب؟",
@@ -92,8 +95,8 @@ export default function CompanyInfo({ darkMode }: CompanyInfoProps) {
           <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-pink-500 bg-pink-500/10 px-3.5 py-1.5 rounded-full border border-pink-500/10">
             ✨ تعرف علينا أكثر
           </span>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight mt-4">
-            لماذا يثق الآلاف في زودها ZWDHA SMM؟
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight mt-4">
+            لماذا يثق الآلاف في Zawdha؟
           </h1>
           <p className="text-sm sm:text-base text-neutral-400 mt-4 leading-relaxed max-w-2xl mx-auto">
             نحن لسنا مجرد موقع بيع خدمات عشوائي، بل شركة تسويق رقمي متكاملة تمتلك خبرة تفوق 5 سنوات في تزويد وتهيئة حسابات التواصل الاجتماعي لأكبر الشركات والمؤثرين في الشرق الأوسط.
@@ -201,7 +204,7 @@ export default function CompanyInfo({ darkMode }: CompanyInfoProps) {
           >
             <h3 className="text-xs sm:text-sm font-extrabold text-pink-500 mb-4 flex items-center gap-1.5">🛡️ شروط الخدمة والقوانين العامة</h3>
             <div className="text-xs space-y-3 text-neutral-400 leading-relaxed">
-              <p>• بطلبك من متجر زودها، فإنك توافق ضمنياً على أنك قرأت وفهمت جميع تفاصيل وشروط الخدمة المحددة لكل باقة.</p>
+              <p>• بطلبك من متجر Zawdha، فإنك توافق ضمنياً على أنك قرأت وفهمت جميع تفاصيل وشروط الخدمة المحددة لكل باقة.</p>
               <p>• يُمنع منعاً باتاً تحويل حسابك أو تغيير المعرّف (Username) الخاص بالصفحة أثناء عملية التزويد النشطة، وإلا سيعتبر الطلب مكتملاً وتلقائياً.</p>
               <p>• نحن لا نتحمل مسؤولية أي نقص في الخدمات التي يتم طلبها بشكل متزامن من مزودين آخرين، حيث أن عدادنا يبدأ من لحظة بدء تنفيذنا للطلب.</p>
             </div>
@@ -216,7 +219,7 @@ export default function CompanyInfo({ darkMode }: CompanyInfoProps) {
           >
             <h3 className="text-xs sm:text-sm font-extrabold text-pink-500 mb-4 flex items-center gap-1.5">🔒 سياسة الخصوصية وحماية البيانات</h3>
             <div className="text-xs space-y-3 text-neutral-400 leading-relaxed">
-              <p>• نلتزم في زودها التزاماً تاماً وبأعلى المعايير القانونية بالحفاظ على خصوصية وسرية بيانات حسابات عملائنا الكرام.</p>
+              <p>• نلتزم في Zawdha التزاماً تاماً وبأعلى المعايير القانونية بالحفاظ على خصوصية وسرية بيانات حسابات عملائنا الكرام.</p>
               <p>• لا نشارك اسمك، رقم الواتساب، رابط الحساب، أو الباقات التي تطلبها مع أي جهة خارجية أو أطراف أخرى تحت أي ظرف.</p>
               <p>• نعمل دائماً في الخفاء وبطرق تزويد غير مرئية؛ بحيث لا يمكن لأي من متابعيك أو منافسيك معرفة أنك تستخدم خدمات تزويد.</p>
             </div>
@@ -245,7 +248,7 @@ export default function CompanyInfo({ darkMode }: CompanyInfoProps) {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6 mt-8 relative z-10">
             <motion.a
               id="info-contact-whatsapp"
-              href="https://wa.me/201558676497"
+              href={`https://wa.me/${waFormat}`}
               target="_blank"
               rel="noopener noreferrer"
               whileHover={{ scale: 1.06 }}
@@ -253,7 +256,7 @@ export default function CompanyInfo({ darkMode }: CompanyInfoProps) {
               className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#25d366] hover:bg-[#20ba5a] text-white font-bold px-6 py-3.5 rounded-xl shadow-md text-sm transition-all"
             >
               <Phone className="w-5 h-5 fill-white" />
-              <span>واتساب: 01558676497</span>
+              <span>واتساب: {cleanPhone}</span>
             </motion.a>
             <motion.a
               id="info-contact-email"

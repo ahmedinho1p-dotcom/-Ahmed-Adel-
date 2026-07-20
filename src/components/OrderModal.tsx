@@ -17,7 +17,7 @@ interface OrderModalProps {
     paymentSender?: string;
     paymentAmount?: number;
     paymentScreenshot?: string;
-  }) => Promise<{ success: boolean; message: string; error?: string }>;
+  }) => Promise<{ success: boolean; message: string; order?: any; error?: string }>;
   darkMode: boolean;
 }
 
@@ -63,6 +63,67 @@ export default function OrderModal({
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const [createdOrder, setCreatedOrder] = useState<any | null>(null);
+
+  const getSuccessWhatsAppLink = (order: any) => {
+    if (!order) return "";
+    const isPaidOnSite = order.paymentMethod ? true : false;
+    
+    const giftFormatted = pack.gift ? (
+      pack.gift === "Like" ? "لايكات Like إضافية مجانية ❤️" :
+      pack.gift === "Follow" ? "متابعين Follow إضافيين مجاناً 👤" :
+      pack.gift === "Both" ? "متابعين ولايكات مجاناً ✨" :
+      pack.gift
+    ) : null;
+
+    const giftSection = giftFormatted ? `• *الهدية المرفقة مجاناً:* 🎁 ${giftFormatted}\n` : "";
+
+    let messageText = "";
+    if (isPaidOnSite) {
+      messageText = 
+        `🌟 *إشعار اكتمال عملية الدفع وتأكيد الطلب* 🌟\n\n` +
+        `أهلاً بك، لقد قمت بسداد قيمة الطلب وتأكيده بنجاح من متجر *Zawdha*! 🎉\n\n` +
+        `━━━━━━━━━━━━━━━━━━━\n` +
+        `📋 *تفاصيل الطلب الفنية:*\n` +
+        `• *كود الطلب (ID):* \`${order.id.slice(0, 8).toUpperCase()}\`\n` +
+        `• *اسم العميل:* ${order.customerName}\n` +
+        `• *رقم الهاتف:* ${order.whatsappNumber}\n` +
+        `• *الخدمة المطلوبة:* ${order.packageName} (${order.platform})\n` +
+        giftSection +
+        `• *رابط الصفحة المستهدفة:* ${order.pageUrl}\n\n` +
+        `━━━━━━━━━━━━━━━━━━━\n` +
+        `💳 *تفاصيل السداد والتحويل المالي:*\n` +
+        `• *طريقة الدفع:* ${order.paymentMethod}\n` +
+        `• *رقم المحول منه:* ${order.paymentSender || "غير محدد"}\n` +
+        `• *المبلغ المحول:* ${order.paymentAmount} ${order.currency}\n\n` +
+        `━━━━━━━━━━━━━━━━━━━\n` +
+        `⏳ *الحالة الحالية:*\n` +
+        `• تم تسجيل إيصال السداد بنجاح في النظام وجاري مراجعته وتفعيل الباقة فورياً خلال دقائق معدودة.\n\n` +
+        `شكراً لاختيارك متجر *Zawdha*! يسعدنا دائماً خدمتك بأفضل جودة وأسرع تنفيذ. 🚀`;
+    } else {
+      messageText = 
+        `👋 *طلب جديد بانتظار إتمام السداد* 👋\n\n` +
+        `أهلاً بك، لقد قمت بتسجيل طلب جديد عبر متجر *Zawdha* وأرغب في تفعيله الآن! 💫\n\n` +
+        `━━━━━━━━━━━━━━━━━━━\n` +
+        `📋 *تفاصيل الطلب الفنية:*\n` +
+        `• *كود الطلب (ID):* \`${order.id.slice(0, 8).toUpperCase()}\`\n` +
+        `• *اسم العميل:* ${order.customerName}\n` +
+        `• *رقم الهاتف:* ${order.whatsappNumber}\n` +
+        `• *الخدمة المطلوبة:* ${order.packageName} (${order.platform})\n` +
+        giftSection +
+        `• *رابط الصفحة المستهدفة:* ${order.pageUrl}\n\n` +
+        `━━━━━━━━━━━━━━━━━━━\n` +
+        `💡 *الخطوة التالية:*\n` +
+        `• الرجاء تزويدي ببيانات السداد لإرسال قيمة الطلب والبدء الفوري بالتفعيل يدوياً.\n\n` +
+        `شكراً لاختيارك متجر *Zawdha*! يسعدنا دائماً خدمتك بأفضل جودة وأسرع تنفيذ. 🚀`;
+    }
+
+    const encodedText = encodeURIComponent(messageText);
+    const rawPhone = storeSettings.whatsapp_number || "01124656914";
+    const cleanPhone = rawPhone.trim();
+    const targetPhone = cleanPhone.startsWith("0") && cleanPhone.length === 11 ? "2" + cleanPhone : cleanPhone;
+    return `https://wa.me/${targetPhone}?text=${encodedText}`;
+  };
 
   // Fetch settings for dynamic wallet/Instapay numbers
   useEffect(() => {
@@ -269,6 +330,17 @@ export default function OrderModal({
 
       if (result.success) {
         setSuccessMsg(result.message);
+        setCreatedOrder(result.order);
+        
+        // Smoothly auto-redirect client to their WhatsApp message
+        try {
+          const waLink = getSuccessWhatsAppLink(result.order);
+          setTimeout(() => {
+            window.location.href = waLink;
+          }, 800);
+        } catch (err) {
+          console.error("Auto-redirect failed:", err);
+        }
       } else {
         setSubmitError(result.error || "فشل تسجيل طلبك، يرجى المحاولة لاحقاً");
       }
@@ -318,22 +390,78 @@ export default function OrderModal({
               </p>
             </div>
 
-            {paymentPath === 'store' ? (
-              <div className={`p-4 rounded-2xl border max-w-md mx-auto text-xs space-y-2 text-right ${
-                darkMode ? "bg-neutral-900 border-neutral-800 text-neutral-300" : "bg-neutral-50 border-neutral-200 text-neutral-700"
+            {/* Elegant Order Receipt Card */}
+            {createdOrder && (
+              <div className={`p-5 rounded-2xl border text-right space-y-3 max-w-md mx-auto relative overflow-hidden ${
+                darkMode ? "bg-neutral-900/50 border-neutral-800/80 text-neutral-300" : "bg-neutral-50 border-neutral-200 text-neutral-700"
               }`}>
-                <span className="font-extrabold text-[#25d366] block">🛡️ عملية آمنة ومراجعة سريعة</span>
-                <p className="leading-relaxed">
-                  تم حفظ بيانات السداد وإيصال التحويل بنجاح في نظامنا. يقوم فريقنا الآن بمطابقة الحساب، وسيتم تفعيل الباقة فورياً بمجرد المراجعة (عادةً تستغرق من دقيقتين إلى نصف ساعة كحد أقصى).
-                </p>
+                <div className="absolute top-0 right-0 w-1.5 h-full bg-green-500" />
+                <div className="flex items-center justify-between border-b border-neutral-800/10 pb-2">
+                  <span className="font-extrabold text-[11px] text-neutral-400">🧾 فاتورة تأكيد الطلب</span>
+                  <span className="text-[10px] px-2.5 py-1 bg-green-500/10 text-green-500 rounded-full font-bold">مدفوع ومكتمل الدفع</span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-xs font-medium">
+                  <div>
+                    <span className="text-neutral-400 block text-[10px]">كود الطلب (ID):</span>
+                    <span className="font-mono text-pink-500 font-black tracking-wider text-sm">#{createdOrder.id.slice(0, 8).toUpperCase()}</span>
+                  </div>
+                  <div>
+                    <span className="text-neutral-400 block text-[10px]">العميل:</span>
+                    <span className="text-neutral-200 font-bold">{createdOrder.customerName}</span>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-neutral-400 block text-[10px]">الخدمة:</span>
+                    <span className="text-neutral-200 font-bold">{createdOrder.packageName} ({createdOrder.platform})</span>
+                  </div>
+                  <div>
+                    <span className="text-neutral-400 block text-[10px]">المبلغ المدفوع:</span>
+                    <span className="text-pink-500 font-black font-mono">{createdOrder.price} {createdOrder.currency}</span>
+                  </div>
+                  <div>
+                    <span className="text-neutral-400 block text-[10px]">رقم التحويل:</span>
+                    <span className="text-neutral-200 font-mono font-bold">{createdOrder.paymentSender || "تحويل مباشر"}</span>
+                  </div>
+                </div>
               </div>
-            ) : (
-              <div className={`p-4 rounded-2xl border max-w-md mx-auto text-xs text-right ${
-                darkMode ? "bg-neutral-900 border-neutral-800 text-neutral-300" : "bg-neutral-50 border-neutral-200 text-neutral-700"
-              }`}>
-                <span className="font-extrabold text-[#25d366] block mb-1">💬 تواصل فوري عبر الواتساب</span>
-                سيقوم أحد ممثلي زودها بالتواصل معك الآن على الرقم الذي أدخلته لتسهيل عملية الدفع وتفعيل طلبك.
+            )}
+
+            {/* Glowing Pulsing Green WhatsApp Redirect Button */}
+            {createdOrder && (
+              <div className="space-y-3 max-w-xs mx-auto">
+                <a
+                  href={getSuccessWhatsAppLink(createdOrder)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-4 px-6 rounded-2xl bg-[#22c55e] hover:bg-[#1eb052] text-white font-extrabold text-xs shadow-lg shadow-green-500/20 transition-all cursor-pointer inline-flex items-center justify-center gap-2 hover:scale-[1.03] active:scale-95 animate-pulse"
+                >
+                  <MessageCircle className="w-5 h-5 fill-white shrink-0" />
+                  <span>تأكيد عملية الدفع والمتابعة عبر واتساب</span>
+                </a>
+                <span className="text-[10px] text-neutral-400 block animate-pulse">
+                  ⚡ جاري تحويلك تلقائياً لتأكيد السداد...
+                </span>
               </div>
+            )}
+
+            {!createdOrder && (
+              paymentPath === 'store' ? (
+                <div className={`p-4 rounded-2xl border max-w-md mx-auto text-xs space-y-2 text-right ${
+                  darkMode ? "bg-neutral-900 border-neutral-800 text-neutral-300" : "bg-neutral-50 border-neutral-200 text-neutral-700"
+                }`}>
+                  <span className="font-extrabold text-[#25d366] block">🛡️ عملية آمنة ومراجعة سريعة</span>
+                  <p className="leading-relaxed">
+                    تم حفظ بيانات السداد وإيصال التحويل بنجاح في نظامنا. يقوم فريقنا الآن بمطابقة الحساب، وسيتم تفعيل الباقة فورياً بمجرد المراجعة (عادةً تستغرق من دقيقتين إلى نصف ساعة كحد أقصى).
+                  </p>
+                </div>
+              ) : (
+                <div className={`p-4 rounded-2xl border max-w-md mx-auto text-xs text-right ${
+                  darkMode ? "bg-neutral-900 border-neutral-800 text-neutral-300" : "bg-neutral-50 border-neutral-200 text-neutral-700"
+                }`}>
+                  <span className="font-extrabold text-[#25d366] block mb-1">💬 تواصل فوري عبر الواتساب</span>
+                  سيقوم أحد ممثلي Zawdha بالتواصل معك الآن على الرقم الذي أدخلته لتسهيل عملية الدفع وتفعيل طلبك.
+                </div>
+              )
             )}
 
             <button
@@ -425,21 +553,144 @@ export default function OrderModal({
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-neutral-400 mb-1.5 text-right">رابط الحساب أو الصفحة المستهدفة للتزويد</label>
-                <input
-                  id="checkout-input-url"
-                  type="text"
-                  required
-                  placeholder="⚠️ تنبيه: يجب أن يكون الحساب عاماً (Public) وليس خاصاً"
-                  value={pageUrl}
-                  onChange={(e) => setPageUrl(e.target.value)}
-                  className={`w-full text-xs p-3 rounded-xl border focus:outline-none transition-all text-right ${
-                    darkMode ? "bg-neutral-900 border-purple-500/30 text-white focus:border-pink-500" : "bg-white border-pink-500/30 text-neutral-900 focus:border-pink-500"
-                  }`}
-                />
-                <span className="text-[10px] text-amber-500 font-bold block mt-1.5 text-right leading-relaxed">
-                  ⚠️ تنبيه هام: تأكد من أن حسابك عام (Public) وليس خاص (Private) لتلقي الخدمة بنجاح وتفادي تعليق الطلب.
-                </span>
+                {(() => {
+                  const packageText = (pack.name + " " + pack.platform + " " + (pack.gift || "")).toLowerCase();
+                  const isLikesOrViews = packageText.includes("like") || 
+                                         packageText.includes("view") || 
+                                         packageText.includes("لايك") || 
+                                         packageText.includes("مشاهد") || 
+                                         packageText.includes("تفاعل") || 
+                                         packageText.includes("منشور") || 
+                                         packageText.includes("بوست");
+
+                  return (
+                    <>
+                      <label className="block text-[11px] font-bold text-neutral-400 mb-1.5 text-right flex items-center justify-between">
+                        {isLikesOrViews ? (
+                          <span className="text-pink-500 font-extrabold">🔗 رابط البوست أو الصورة أو الفيديو المستهدف للتزويد</span>
+                        ) : (
+                          <span className="text-blue-400 font-extrabold">👤 رابط الحساب أو الصفحة المستهدفة للتزويد (يجب أن يكون عاماً)</span>
+                        )}
+                        <span className="text-[10px] px-2.5 py-0.5 rounded-md bg-pink-500/10 text-pink-500 font-extrabold font-mono">مطلوب للخدمة</span>
+                      </label>
+                      <input
+                        id="checkout-input-url"
+                        type="text"
+                        required
+                        placeholder={
+                          isLikesOrViews
+                            ? `الصق هنا رابط الصورة، الفيديو، أو البوست المستهدف من ${pack.platform}...`
+                            : `الصق هنا رابط الحساب أو اسم المستخدم العام من ${pack.platform}...`
+                        }
+                        value={pageUrl}
+                        onChange={(e) => setPageUrl(e.target.value)}
+                        className={`w-full text-xs p-3.5 rounded-2xl border focus:outline-none transition-all text-right font-medium ${
+                          darkMode 
+                            ? "bg-neutral-950/80 border-purple-500/30 text-white focus:border-pink-500" 
+                            : "bg-white border-pink-500/20 text-neutral-900 focus:border-pink-500"
+                        }`}
+                      />
+                    </>
+                  );
+                })()}
+
+                {/* Dynamic Instructions Card based on the Gift type */}
+                {pack.gift && (() => {
+                  const giftLower = pack.gift.toLowerCase();
+                  const isLikesOrViews = giftLower.includes("like") || giftLower.includes("view") || giftLower.includes("لايك") || giftLower.includes("مشاهد") || giftLower.includes("تفاعل") || giftLower.includes("منشور") || giftLower.includes("بوست");
+                  const isFollowers = giftLower.includes("follow") || giftLower.includes("متابع") || giftLower.includes("مشترك") || giftLower.includes("حساب") || giftLower.includes("صفح");
+                  const isBoth = giftLower.includes("both") || (isLikesOrViews && isFollowers);
+
+                  if (isBoth) {
+                    return (
+                      <div className={`mt-3 p-4 rounded-2xl border text-right space-y-2 relative overflow-hidden transition-all ${
+                        darkMode ? "bg-gradient-to-br from-amber-500/5 via-pink-500/5 to-transparent border-amber-500/20" : "bg-gradient-to-br from-amber-50/50 via-pink-50/50 to-transparent border-amber-200"
+                      }`}>
+                        <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-amber-500 to-pink-500" />
+                        <div className="flex items-start gap-2">
+                          <span className="text-base shrink-0">🎁</span>
+                          <div>
+                            <span className="font-extrabold text-xs text-amber-500 block mb-1">تعليمات الهدية المزدوجة المشمولة بالباقة:</span>
+                            <p className="text-[11px] text-neutral-400 leading-relaxed font-medium">
+                              1. <strong className="text-pink-500">لتلقي المتابعين:</strong> يجب أن يكون حسابك <strong className="text-neutral-200 underline decoration-pink-500">عاماً (Public) وليس خاصاً</strong>. يرجى عدم تغيير اسم المستخدم أثناء تنفيذ الطلب.
+                              <br />
+                              2. <strong className="text-pink-500">لتلقي اللايكات/المشاهدات:</strong> يرجى وضع رابط المنشور أو الصورة/الفيديو للتفاعل السريع، أو سيتم تزويدها تلقائياً لآخر منشور في حسابك العام.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  if (isLikesOrViews) {
+                    return (
+                      <div className={`mt-3 p-4 rounded-2xl border text-right space-y-2 relative overflow-hidden transition-all ${
+                        darkMode ? "bg-gradient-to-br from-pink-500/5 to-transparent border-pink-500/20" : "bg-gradient-to-br from-pink-50/50 to-transparent border-pink-200"
+                      }`}>
+                        <div className="absolute top-0 left-0 w-1.5 h-full bg-pink-500 animate-pulse" />
+                        <div className="flex items-start gap-2.5">
+                          <span className="text-lg shrink-0">📸</span>
+                          <div>
+                            <span className="font-extrabold text-xs text-pink-500 block mb-1.5 flex items-center gap-1.5">
+                              <span>تعليمات هدية اللايكات والمشاهدات المجانية:</span>
+                              <span className="w-1.5 h-1.5 rounded-full bg-pink-500 animate-ping" />
+                            </span>
+                            <div className="text-[11px] text-neutral-400 leading-relaxed font-medium space-y-1">
+                              <p>
+                                ✨ هديتك المشمولة بالباقة هي <strong className="text-neutral-200">لايكات وتفاعلات/مشاهدات إضافية مجانية!</strong>
+                              </p>
+                              <p className="p-2.5 rounded-xl bg-pink-500/5 border border-pink-500/10 text-neutral-300">
+                                🔗 <strong className="text-pink-500">مهم جداً:</strong> يرجى تزويدنا بـ <strong className="text-white underline decoration-pink-500">رابط الصورة، الفيديو أو المنشور (البوست)</strong> المراد تزويده بالهدية، وليس رابط الحساب العام، لكي نتمكن من إرسال التفاعلات إليه مباشرة.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  if (isFollowers) {
+                    return (
+                      <div className={`mt-3 p-4 rounded-2xl border text-right space-y-2 relative overflow-hidden transition-all ${
+                        darkMode ? "bg-gradient-to-br from-blue-500/5 to-transparent border-blue-500/20" : "bg-gradient-to-br from-blue-50/50 to-transparent border-blue-200"
+                      }`}>
+                        <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-500 animate-pulse" />
+                        <div className="flex items-start gap-2.5">
+                          <span className="text-lg shrink-0">👤</span>
+                          <div>
+                            <span className="font-extrabold text-xs text-blue-400 block mb-1.5 flex items-center gap-1.5">
+                              <span>تعليمات هدية المتابعين المجانية:</span>
+                              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping" />
+                            </span>
+                            <div className="text-[11px] text-neutral-400 leading-relaxed font-medium space-y-1">
+                              <p>
+                                ✨ هديتك المشمولة بالباقة هي <strong className="text-neutral-200">متابعين حقيقيين إضافيين مجاناً!</strong>
+                              </p>
+                              <p className="p-2.5 rounded-xl bg-blue-500/5 border border-blue-500/10 text-neutral-300">
+                                🔒 <strong className="text-blue-400">شرط أساسي وجوهري:</strong> يجب أن يكون حسابك المستهدف <strong className="text-white underline decoration-blue-400">عاماً (Public) وليس خاصاً (Private)</strong>. إذا كان حسابك مغلقاً فلن تصلك الهدية ولا الباقة الأساسية أبداً وسيتم تجميد الطلب تلقائياً.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return null;
+                })()}
+
+                {/* Default General Warning if no gift or fallback */}
+                {!pack.gift && (
+                  <div className={`mt-3 p-3.5 rounded-2xl border text-right relative overflow-hidden ${
+                    darkMode ? "bg-amber-500/5 border-amber-500/10 text-neutral-300" : "bg-amber-50/50 border-amber-200 text-neutral-700"
+                  }`}>
+                    <div className="absolute top-0 left-0 w-1.5 h-full bg-amber-500" />
+                    <p className="text-[11px] leading-relaxed font-semibold text-amber-500 flex items-center gap-1">
+                      <span>⚠️ تنبيه هام:</span>
+                      <span className="text-neutral-400 font-medium">تأكد تماماً من أن حسابك عام (Public) وليس خاص (Private) لتجنب أي تعليق أو فشل في تزويد الخدمة فوراً.</span>
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Coupon Field */}
